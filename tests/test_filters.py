@@ -3,8 +3,8 @@ from django.urls import reverse
 from rest_framework import status
 from rest_framework.test import APIClient
 
-from backend.recipes.models import Ingredient, Recipe, Tag
-from backend.users.models import User
+from recipes.models import Ingredient, Recipe, Tag
+from users.models import User
 
 
 @pytest.fixture

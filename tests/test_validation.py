@@ -2,11 +2,11 @@ import pytest
 from django.core.exceptions import ValidationError
 from django.core.files.uploadedfile import SimpleUploadedFile
 
-from backend.recipes.models import Recipe, Tag
-from backend.recipes.validators import (
+from recipes.models import Recipe, Tag
+from recipes.validators import (
     validate_hex_color, validate_image_extension, validate_image_size,
 )
-from backend.users.models import User
+from users.models import User
 
 
 @pytest.mark.django_db
