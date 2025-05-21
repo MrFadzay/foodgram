@@ -6,7 +6,7 @@ django-filter==21.1
 django-cors-headers==3.7.0
 drf-extra-fields==3.2.1
 Pillow==9.0.0
-python-dotenv==0.19.0
+python-dotenv==1.0.0
 gunicorn==20.1.0
 psycopg2-binary==2.9.3
 django-ratelimit==4.1.0
@@ -17,7 +17,6 @@ isort==5.10.1
 pytest==6.2.4
 pytest-django==4.5.2
 pytest-pythonpath==0.7.4
-python-dotenv==1.0.0
 
 # Documentation
 drf-yasg==1.20.0
