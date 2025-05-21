@@ -1,6 +1,7 @@
 volumes:
   pg_data:
   static:
+  media:
 services:
   db:
     image: postgres:13.10
@@ -12,6 +13,7 @@ services:
     env_file: .env
     volumes:
       - static:/backend_static
+      - media:/media
     depends_on:
       - db
   frontend:
