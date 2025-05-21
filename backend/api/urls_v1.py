@@ -20,13 +20,26 @@ urlpatterns.extend([
     path('users/me/', UserViewSet.as_view({'get': 'me'}), name='users-me'),
     path('users/<int:pk>/subscribe/', UserViewSet.as_view(
         {'post': 'subscribe', 'delete': 'subscribe'}), name='users-subscribe'),
-    path('users/subscriptions/',
-         UserViewSet.as_view({'get': 'subscriptions'}), name='users-subscriptions'),
+    path(
+        'users/subscriptions/',
+        UserViewSet.as_view({'get': 'subscriptions'}),
+        name='users-subscriptions'
+    ),
 
-    path('recipes/<int:pk>/favorite/', RecipeViewSet.as_view(
-        {'post': 'favorite', 'delete': 'favorite'}), name='recipes-favorite'),
-    path('recipes/<int:pk>/shopping_cart/', RecipeViewSet.as_view(
-        {'post': 'shopping_cart', 'delete': 'shopping_cart'}), name='recipes-shopping-cart'),
-    path('recipes/download_shopping_cart/', RecipeViewSet.as_view(
-        {'get': 'download_shopping_cart'}), name='recipes-download-shopping-cart'),
+    path(
+        'recipes/<int:pk>/favorite/',
+        RecipeViewSet.as_view({'post': 'favorite', 'delete': 'favorite'}),
+        name='recipes-favorite'
+    ),
+    path(
+        'recipes/<int:pk>/shopping_cart/',
+        RecipeViewSet.as_view(
+            {'post': 'shopping_cart', 'delete': 'shopping_cart'}),
+        name='recipes-shopping-cart'
+    ),
+    path(
+        'recipes/download_shopping_cart/',
+        RecipeViewSet.as_view({'get': 'download_shopping_cart'}),
+        name='recipes-download-shopping-cart'
+    ),
 ])
