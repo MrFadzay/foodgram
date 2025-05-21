@@ -32,6 +32,35 @@ const About = ({ updateOrders, orders }) => {
             </p>
           </div>
         </div>
+        <div>
+          <h2 className={styles.subtitle}>О проекте «Фудграм»</h2>
+          <div className={styles.text}>
+            <p className={styles.textItem}>
+              <b>Цель проекта:</b> разработка онлайн-платформы для публикации, хранения и поиска рецептов с возможностью формирования списка покупок и управления избранным.
+            </p>
+            <p className={styles.textItem}>
+              <b>Структура:</b> проект состоит из нескольких частей:
+              <ul className={styles.textItem}>
+                <li>Frontend — одностраничное React SPA;</li>
+                <li>Backend — REST API на Django/Django REST Framework;</li>
+                <li>Инфраструктура — Docker, nginx, PostgreSQL;</li>
+                <li>Документация и тестовые данные.</li>
+              </ul>
+            </p>
+            <p className={styles.textItem}>
+              <b>Основные задачи:</b>
+              <ul className={styles.textItem}>
+                <li>Реализация моделей: Рецепт, Тег, Ингредиент и связанных сущностей;</li>
+                <li>Создание и публикация рецептов, добавление ингредиентов и тегов;</li>
+                <li>Регистрация и управление пользователями;</li>
+                <li>Работа с избранным и списком покупок;</li>
+                <li>Фильтрация и поиск рецептов;</li>
+                <li>Администрирование через Django admin;</li>
+                <li>Автоматизация деплоя и запуск в контейнерах.</li>
+              </ul>
+            </p>
+          </div>
+        </div>
         <aside>
           <h2 className={styles.additionalTitle}>
             Ссылки
