@@ -148,10 +148,9 @@ class RecipeCreateUpdateSerializer(RecipeSerializer):
         if len(tags) != len(set(tags)):
             raise serializers.ValidationError('Теги не должны повторяться.')
 
-        if self.context['request'].method == 'POST':
-            image = data.get('image')
-            if not image:
-                raise serializers.ValidationError('Добавьте изображение.')
+        image = data.get('image')
+        if not image:
+            raise serializers.ValidationError('Добавьте изображение.')
 
         return data
 
@@ -217,7 +216,6 @@ class RecipeShortSerializer(serializers.ModelSerializer):
 
 class FollowSerializer(UserSerializer):
     recipes = serializers.SerializerMethodField()
-    recipes_count = serializers.SerializerMethodField()
 
     class Meta:
         model = User
@@ -229,7 +227,6 @@ class FollowSerializer(UserSerializer):
             'last_name',
             'is_subscribed',
             'recipes',
-            'recipes_count',
         )
 
     def get_recipes(self, obj):
@@ -243,13 +240,10 @@ class FollowSerializer(UserSerializer):
                 recipes = recipes[:int(limit)]
             except ValueError:
                 pass
-        serializer = RecipeShortSerializer(
+        serializer = RecipeSerializer(
             recipes, many=True, context={'request': request}
         )
         return serializer.data
-
-    def get_recipes_count(self, obj):
-        return obj.recipes.count()
 
 
 class CustomUserCreateSerializer(DjoserUserCreateSerializer):
