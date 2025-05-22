@@ -22,7 +22,7 @@ CACHES = {
 }
 
 # Время жизни кэша (в секундах)
-CACHE_TTL = 60 * 5  # 5 минут
+CACHE_TTL = 60 * 5
 
 INSTALLED_APPS = [
     'django.contrib.admin',
