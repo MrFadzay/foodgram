@@ -12,7 +12,7 @@ class Command(BaseCommand):
         base_dir = os.path.dirname(os.path.abspath(__file__))
         project_dir = os.path.dirname(os.path.dirname(
             os.path.dirname(os.path.dirname(os.path.dirname(base_dir)))))
-        csv_file = os.path.join(project_dir, 'data', 'ingredients.csv')
+        csv_file = os.path.join(os.getcwd(), 'data', 'ingredients.csv')
 
         try:
             with open(csv_file, 'r', encoding='utf-8') as file:

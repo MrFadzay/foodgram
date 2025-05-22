@@ -6,6 +6,7 @@ from rest_framework import mixins, status, viewsets
 from rest_framework.decorators import action
 from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.response import Response
+from rest_framework.pagination import LimitOffsetPagination
 
 from api.decorators import method_rate_limit
 from recipes.models import (
@@ -18,7 +19,9 @@ from .mixins import CachedViewSetMixin
 from .permissions import IsAuthorOrReadOnly
 from .serializers import (
     FollowSerializer, IngredientSerializer, RecipeCreateUpdateSerializer,
-    RecipeSerializer, RecipeShortSerializer, TagSerializer, UserSerializer,
+    RecipeSerializer, RecipeShortSerializer, SetAvatarSerializer,
+    TagSerializer, UserSerializer, CustomUserCreateSerializer,
+    CustomUserResponseOnCreateSerializer,
 )
 
 
@@ -26,7 +29,6 @@ from .serializers import (
 class TagViewSet(CachedViewSetMixin,
                  mixins.ListModelMixin,
                  mixins.RetrieveModelMixin,
-                 mixins.CreateModelMixin,
                  viewsets.GenericViewSet):
     queryset = Tag.objects.all()
     serializer_class = TagSerializer
@@ -50,13 +52,42 @@ class IngredientViewSet(CachedViewSetMixin, viewsets.ReadOnlyModelViewSet):
 
 
 @method_rate_limit()
-class UserViewSet(viewsets.ModelViewSet):
+class UserViewSet(mixins.ListModelMixin,
+                  mixins.RetrieveModelMixin,
+                  mixins.CreateModelMixin,
+                  viewsets.GenericViewSet):
     queryset = User.objects.all().prefetch_related(
         'follower',
         'following'
     )
-    serializer_class = UserSerializer
-    permission_classes = (AllowAny,)
+
+    def get_serializer_class(self):
+        if self.action == 'create':
+            return CustomUserCreateSerializer
+        elif self.action == 'subscribe':
+            return FollowSerializer
+        return UserSerializer
+
+    def create(self, request, *args, **kwargs):
+        serializer = self.get_serializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        self.perform_create(serializer)
+        headers = self.get_success_headers(serializer.data)
+        response_serializer = CustomUserResponseOnCreateSerializer(
+            serializer.instance
+        )
+        return Response(
+            response_serializer.data,
+            status=status.HTTP_201_CREATED,
+            headers=headers
+        )
+
+    def get_permissions(self):
+        if self.action in ('list', 'retrieve', 'create'):
+            return (AllowAny(),)
+        return (IsAuthenticated(),)
+
+    pagination_class = LimitOffsetPagination
 
     @action(
         detail=False,
@@ -64,8 +95,33 @@ class UserViewSet(viewsets.ModelViewSet):
         permission_classes=[IsAuthenticated]
     )
     def me(self, request):
+        if not request.user.is_authenticated:
+            return Response(status=status.HTTP_401_UNAUTHORIZED)
         serializer = self.get_serializer(request.user)
         return Response(serializer.data)
+
+    @action(
+        detail=False,
+        methods=['put', 'delete'],
+        permission_classes=[IsAuthenticated]
+    )
+    def avatar(self, request):
+        if request.method == 'PUT':
+            if not request.data:
+                return Response(
+                    {'errors': 'Тело запроса не может быть пустым.'},
+                    status=status.HTTP_400_BAD_REQUEST
+                )
+            serializer = SetAvatarSerializer(
+                request.user, data=request.data, partial=True
+            )
+            serializer.is_valid(raise_exception=True)
+            serializer.save()
+            return Response(serializer.data, status=status.HTTP_200_OK)
+        if request.method == 'DELETE':
+            request.user.avatar = None
+            request.user.save()
+            return Response(status=status.HTTP_204_NO_CONTENT)
 
     @action(
         detail=True,
@@ -110,10 +166,10 @@ class UserViewSet(viewsets.ModelViewSet):
     )
     def subscriptions(self, request):
         user = request.user
-        follows = User.objects.filter(following__user=user).prefetch_related(
+        authors = User.objects.filter(following__user=user).prefetch_related(
             'recipes'
         )
-        pages = self.paginate_queryset(follows)
+        pages = self.paginate_queryset(authors)
         serializer = FollowSerializer(
             pages,
             many=True,
@@ -136,11 +192,15 @@ class RecipeViewSet(viewsets.ModelViewSet):
     permission_classes = (IsAuthorOrReadOnly,)
     filter_backends = (DjangoFilterBackend,)
     filterset_class = RecipeFilter
+    pagination_class = LimitOffsetPagination
 
     def get_serializer_class(self):
         if self.action in ('create', 'partial_update'):
             return RecipeCreateUpdateSerializer
         return RecipeSerializer
+
+    def get_serializer_context(self):
+        return {'request': self.request}
 
     def perform_create(self, serializer):
         serializer.save(author=self.request.user)
@@ -165,6 +225,12 @@ class RecipeViewSet(viewsets.ModelViewSet):
         user = request.user
         recipe = get_object_or_404(Recipe, pk=pk)
 
+        if not user.is_authenticated:
+            return Response(
+                {'errors': 'Требуется аутентификация'},
+                status=status.HTTP_401_UNAUTHORIZED
+            )
+
         if request.method == 'POST':
             if model.objects.filter(user=user, recipe=recipe).exists():
                 return Response(
@@ -181,9 +247,19 @@ class RecipeViewSet(viewsets.ModelViewSet):
                 obj.delete()
                 return Response(status=status.HTTP_204_NO_CONTENT)
             return Response(
-                {'errors': 'Рецепт не найден'},
+                {'errors': 'Рецепт не найден в списке'},
                 status=status.HTTP_400_BAD_REQUEST
             )
+
+    @action(
+        detail=True,
+        methods=['get'],
+        permission_classes=[AllowAny]
+    )
+    def get_link(self, request, pk=None):
+        recipe: Recipe = get_object_or_404(Recipe, pk=pk)
+        short_link = request.build_absolute_uri(f'/recipes/{recipe.id}/')
+        return Response({'short-link': short_link}, status=status.HTTP_200_OK)
 
     @action(
         detail=False,
@@ -206,6 +282,12 @@ class RecipeViewSet(viewsets.ModelViewSet):
             'ingredient__name',
             'ingredient__measurement_unit'
         ).annotate(amount=Sum('amount'))
+
+        if not ingredients:
+            return Response(
+                {'errors': 'Нет ингредиентов для списка покупок'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
 
         shopping_list = []
         for ingredient in ingredients:

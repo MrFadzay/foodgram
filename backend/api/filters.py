@@ -8,7 +8,9 @@ class RecipeFilter(FilterSet):
         field_name='tags__slug',
         to_field_name='slug',
         queryset=Tag.objects.all(),
+        conjoined=False
     )
+    author = filters.NumberFilter(field_name='author__id')
     is_favorited = filters.BooleanFilter(method='filter_is_favorited')
     is_in_shopping_cart = filters.BooleanFilter(
         method='filter_is_in_shopping_cart'
@@ -20,10 +22,10 @@ class RecipeFilter(FilterSet):
 
     def filter_is_favorited(self, queryset, name, value):
         if value and self.request.user.is_authenticated:
-            return queryset.filter(favorites__user=self.request.user)
+            return queryset.filter(favorites__user=self.request.user).distinct()
         return queryset
 
     def filter_is_in_shopping_cart(self, queryset, name, value):
         if value and self.request.user.is_authenticated:
-            return queryset.filter(shopping_cart__user=self.request.user)
+            return queryset.filter(shopping_cart__user=self.request.user).distinct()
         return queryset

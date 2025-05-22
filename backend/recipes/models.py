@@ -12,7 +12,7 @@ class Tag(models.Model):
     """Модель тегов."""
     name = models.CharField(
         'Название',
-        max_length=200,
+        max_length=32,
         unique=True,
     )
     color = models.CharField(
@@ -23,7 +23,7 @@ class Tag(models.Model):
     )
     slug = models.SlugField(
         'Уникальный слаг',
-        max_length=200,
+        max_length=32,
         unique=True,
     )
 
@@ -40,11 +40,11 @@ class Ingredient(models.Model):
     """Модель ингредиентов."""
     name = models.CharField(
         'Название',
-        max_length=200,
+        max_length=128,
     )
     measurement_unit = models.CharField(
         'Единица измерения',
-        max_length=200,
+        max_length=64,
     )
 
     class Meta:
@@ -72,7 +72,7 @@ class Recipe(models.Model):
     )
     name = models.CharField(
         'Название',
-        max_length=200,
+        max_length=256,
     )
     image = models.ImageField(
         'Картинка',

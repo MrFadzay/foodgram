@@ -2,6 +2,9 @@ from django.core.validators import MinValueValidator
 from django.db import transaction
 from drf_extra_fields.fields import Base64ImageField
 from rest_framework import serializers
+from djoser.serializers import (
+    UserCreateSerializer as DjoserUserCreateSerializer,
+)
 
 from recipes.models import (
     Favorite, Ingredient, Recipe, RecipeIngredient, ShoppingCart, Tag,
@@ -12,7 +15,7 @@ from users.models import Follow, User
 class TagSerializer(serializers.ModelSerializer):
     class Meta:
         model = Tag
-        fields = ('id', 'name', 'color', 'slug')
+        fields = ('id', 'name', 'slug')
 
 
 class IngredientSerializer(serializers.ModelSerializer):
@@ -59,13 +62,17 @@ class UserSerializer(serializers.ModelSerializer):
             'first_name',
             'last_name',
             'is_subscribed',
+            'avatar',
         )
 
     def get_is_subscribed(self, obj):
-        user = self.context.get('request').user
-        if user.is_anonymous:
+        request = self.context.get('request')
+        if (
+            not request or not request.user.is_authenticated
+            or not request.user.id
+        ):
             return False
-        return Follow.objects.filter(user=user, author=obj).exists()
+        return Follow.objects.filter(user=request.user, author=obj).exists()
 
 
 class RecipeSerializer(serializers.ModelSerializer):
@@ -76,7 +83,7 @@ class RecipeSerializer(serializers.ModelSerializer):
         many=True,
         read_only=True
     )
-    image = Base64ImageField()
+    image = serializers.ImageField(read_only=True, use_url=True)
     is_favorited = serializers.SerializerMethodField()
     is_in_shopping_cart = serializers.SerializerMethodField()
 
@@ -96,28 +103,57 @@ class RecipeSerializer(serializers.ModelSerializer):
         )
 
     def get_is_favorited(self, obj):
-        user = self.context.get('request').user
-        if user.is_anonymous:
+        request = self.context.get('request')
+        if not request or not request.user.is_authenticated:
             return False
-        return Favorite.objects.filter(user=user, recipe=obj).exists()
+        return Favorite.objects.filter(user=request.user, recipe=obj).exists()
 
     def get_is_in_shopping_cart(self, obj):
-        user = self.context.get('request').user
-        if user.is_anonymous:
+        request = self.context.get('request')
+        if not request or not request.user.is_authenticated:
             return False
-        return ShoppingCart.objects.filter(user=user, recipe=obj).exists()
+        return ShoppingCart.objects.filter(
+            user=request.user, recipe=obj
+        ).exists()
 
 
 class RecipeCreateUpdateSerializer(RecipeSerializer):
     ingredients = RecipeIngredientWriteSerializer(many=True)
     tags = serializers.PrimaryKeyRelatedField(
         many=True,
-        queryset=Tag.objects.all()
+        queryset=Tag.objects.all(),
     )
     image = Base64ImageField()
     cooking_time = serializers.IntegerField(
         validators=[MinValueValidator(1)]
     )
+
+    def validate(self, data):
+        ingredients = data.get('ingredients')
+        if not ingredients:
+            raise serializers.ValidationError(
+                'Добавьте хотя бы один ингредиент.'
+            )
+        ingredient_ids = [
+            ingredient['ingredient'].id for ingredient in ingredients
+        ]
+        if len(ingredient_ids) != len(set(ingredient_ids)):
+            raise serializers.ValidationError(
+                'Ингредиенты не должны повторяться.'
+            )
+
+        tags = data.get('tags')
+        if not tags:
+            raise serializers.ValidationError('Выберите хотя бы один тег.')
+        if len(tags) != len(set(tags)):
+            raise serializers.ValidationError('Теги не должны повторяться.')
+
+        if self.context['request'].method == 'POST':
+            image = data.get('image')
+            if not image:
+                raise serializers.ValidationError('Добавьте изображение.')
+
+        return data
 
     def to_representation(self, instance):
         return RecipeSerializer(instance, context=self.context).data
@@ -183,17 +219,65 @@ class FollowSerializer(UserSerializer):
     recipes = serializers.SerializerMethodField()
     recipes_count = serializers.SerializerMethodField()
 
-    class Meta(UserSerializer.Meta):
-        fields = UserSerializer.Meta.fields + ('recipes', 'recipes_count')
+    class Meta:
+        model = User
+        fields = (
+            'email',
+            'id',
+            'username',
+            'first_name',
+            'last_name',
+            'is_subscribed',
+            'recipes',
+            'recipes_count',
+        )
 
     def get_recipes(self, obj):
         request = self.context.get('request')
+        if not request:
+            return []
         limit = request.GET.get('recipes_limit')
-        recipes = obj.recipes.all()
+        recipes = obj.recipes.all().order_by('id')
         if limit:
-            recipes = recipes[:int(limit)]
-        serializer = RecipeShortSerializer(recipes, many=True, read_only=True)
+            try:
+                recipes = recipes[:int(limit)]
+            except ValueError:
+                pass
+        serializer = RecipeShortSerializer(
+            recipes, many=True, context={'request': request}
+        )
         return serializer.data
 
     def get_recipes_count(self, obj):
         return obj.recipes.count()
+
+
+class CustomUserCreateSerializer(DjoserUserCreateSerializer):
+    class Meta(DjoserUserCreateSerializer.Meta):
+        fields = (
+            'email',
+            'username',
+            'first_name',
+            'last_name',
+            'password',
+        )
+
+
+class CustomUserResponseOnCreateSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = User
+        fields = (
+            'email',
+            'id',
+            'username',
+            'first_name',
+            'last_name',
+        )
+
+
+class SetAvatarSerializer(serializers.ModelSerializer):
+    avatar = Base64ImageField(required=True)
+
+    class Meta:
+        model = User
+        fields = ('avatar',)
