@@ -4,9 +4,9 @@ from django.shortcuts import get_object_or_404
 from django_filters.rest_framework import DjangoFilterBackend
 from rest_framework import mixins, status, viewsets
 from rest_framework.decorators import action
+from rest_framework.pagination import LimitOffsetPagination
 from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.response import Response
-from rest_framework.pagination import LimitOffsetPagination
 
 from api.decorators import method_rate_limit
 from recipes.models import (
@@ -18,10 +18,10 @@ from .filters import RecipeFilter
 from .mixins import CachedViewSetMixin
 from .permissions import IsAuthorOrReadOnly
 from .serializers import (
+    CustomUserCreateSerializer, CustomUserResponseOnCreateSerializer,
     FollowSerializer, IngredientSerializer, RecipeCreateUpdateSerializer,
     RecipeSerializer, RecipeShortSerializer, SetAvatarSerializer,
-    TagSerializer, UserSerializer, CustomUserCreateSerializer,
-    CustomUserResponseOnCreateSerializer,
+    TagSerializer, UserSerializer,
 )
 
 
