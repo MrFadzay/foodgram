@@ -9,9 +9,6 @@ class Command(BaseCommand):
     help = 'Импорт ингредиентов из CSV файла'
 
     def handle(self, *args, **options):
-        base_dir = os.path.dirname(os.path.abspath(__file__))
-        project_dir = os.path.dirname(os.path.dirname(
-            os.path.dirname(os.path.dirname(os.path.dirname(base_dir)))))
         csv_file = os.path.join(os.getcwd(), 'data', 'ingredients.csv')
 
         try:
