@@ -1,8 +1,24 @@
 import pytest
 from rest_framework.test import APIClient  # type: ignore
 from django.contrib.auth import get_user_model  # type: ignore
+from django.core.files.base import ContentFile
+from django.core.files.uploadedfile import SimpleUploadedFile
 
 User = get_user_model()
+
+# Фиктивное изображение 1x1 прозрачный PNG в base64
+# Это очень маленькое изображение, которое подходит для тестов.
+TEST_IMAGE_BASE64 = (
+    'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNkYAAAAAYAAjCB0C8AAAAASUVORK5CYII=' # noqa
+)
+# Используем очень маленькое изображение (1x1 прозрачный PNG)
+# для имитации загрузки файла.
+TEST_IMAGE_BYTES = (
+    b'\x89PNG\r\n\x1a\n\x00\x00\x00\rIHDR\x00\x00\x00\x01\x00\x00\x00\x01'
+    b'\x08\x06\x00\x00\x00\x1f\x15\xc4\x89\x00\x00\x00\x0cIDATx\xda\xed\xc1'
+    b'\x01\x01\x00\x00\x00\xc2\xa0\xf7Om\x00\x00\x00\x00IEND\xaeB`\x82'
+)
+TEST_IMAGE_CONTENT = ContentFile(TEST_IMAGE_BYTES, name='test_image.png')
 
 
 @pytest.fixture
@@ -115,7 +131,7 @@ def recipe_data(create_user, create_tag, create_ingredient):
         'cooking_time': 10,
         'tags': [create_tag.id],
         'ingredients': [{'id': create_ingredient.id, 'amount': 200}],
-        'image': 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNkYAAAAAYAAjCB0C8AAAAASUVORK5CYII='  # noqa
+        'image': TEST_IMAGE_BASE64  # Используем фиктивное изображение
     }
 
 
@@ -128,7 +144,11 @@ def create_recipe(db, create_user, create_tag, create_ingredient):
         name='Омлет',
         text='Простой омлет',
         cooking_time=10,
-        image='data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNkYAAAAAYAAjCB0C8AAAAASUVORK5CYII='  # noqa
+        image=SimpleUploadedFile(
+            'test_image.png',
+            TEST_IMAGE_CONTENT.read(),
+            content_type='image/png'
+        )
     )
     recipe.tags.add(create_tag)
     RecipeIngredient.objects.create(
@@ -148,7 +168,7 @@ def recipe_data_2(create_user_2, create_tag, create_ingredient):
         'cooking_time': 5,
         'tags': [create_tag.id],
         'ingredients': [{'id': create_ingredient.id, 'amount': 100}],
-        'image': 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNkYAAAAAYAAjCB0C8AAAAASUVORK5CYII='  # noqa
+        'image': TEST_IMAGE_BASE64  # Используем фиктивное изображение
     }
 
 
@@ -161,7 +181,11 @@ def create_recipe_2(db, create_user_2, create_tag, create_ingredient):
         name='Яичница',
         text='Простая яичница',
         cooking_time=5,
-        image='data:image/png;base64,iVBORw0KGgoAAAANSUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNkYAAAAAYAAjCB0C8AAAAASUVORK5CYII='  # noqa
+        image=SimpleUploadedFile(
+            'test_image.png',
+            TEST_IMAGE_CONTENT.read(),
+            content_type='image/png'
+        )
     )
     recipe.tags.add(create_tag)
     RecipeIngredient.objects.create(
