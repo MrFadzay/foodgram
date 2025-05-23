@@ -1,3 +1,4 @@
+from django.db.models import Q
 from django_filters.rest_framework import FilterSet, filters
 
 from recipes.models import Recipe, Tag
@@ -21,11 +22,21 @@ class RecipeFilter(FilterSet):
         fields = ('tags', 'author', 'is_favorited', 'is_in_shopping_cart')
 
     def filter_is_favorited(self, queryset, name, value):
-        if value and self.request.user.is_authenticated:
-            return queryset.filter(favorites__user=self.request.user).distinct()
+        if self.request.user.is_authenticated:
+            if value:
+                return queryset.filter(
+                    favorites__user=self.request.user).distinct()
+            return queryset.filter(
+                ~Q(favorites__user=self.request.user)
+            ).distinct()
         return queryset
 
     def filter_is_in_shopping_cart(self, queryset, name, value):
-        if value and self.request.user.is_authenticated:
-            return queryset.filter(shopping_cart__user=self.request.user).distinct()
+        if self.request.user.is_authenticated:
+            if value:
+                return queryset.filter(
+                    shopping_cart__user=self.request.user).distinct()
+            return queryset.filter(
+                ~Q(shopping_cart__user=self.request.user)
+            ).distinct()
         return queryset

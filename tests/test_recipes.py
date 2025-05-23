@@ -1,134 +1,229 @@
-from django.test import TestCase
-from django.urls import reverse
-from rest_framework import status
-from rest_framework.test import APIClient
+import pytest
+from recipes.models import Recipe, Favorite, ShoppingCart  # type: ignore
+from django.contrib.auth import get_user_model  # type: ignore
 
-from recipes.models import Ingredient, Recipe, RecipeIngredient, Tag
-from users.models import User
+User = get_user_model()
 
 
-class RecipeAPITests(TestCase):
-    def setUp(self):
-        self.client = APIClient()
-        self.user = User.objects.create_user(
-            email='test@example.com',
-            username='testuser',
-            password='testpass123',
-            first_name='Test',
-            last_name='User'
+@pytest.mark.django_db
+def test_create_recipe(auth_client, recipe_data):
+    """
+    Проверка успешного создания нового рецепта авторизованным пользователем.
+    API-эндпоинт: /api/recipes/
+    HTTP-метод: POST
+    """
+    response = auth_client.post('/api/recipes/', recipe_data, format='json')
+    assert response.status_code == 201
+    assert Recipe.objects.filter(name=recipe_data['name']).exists()
+    assert response.data['name'] == recipe_data['name']
+    assert response.data['cooking_time'] == recipe_data['cooking_time']
+    assert len(response.data['tags']) == len(recipe_data['tags'])
+    assert len(response.data['ingredients']) == len(recipe_data['ingredients'])
+
+
+@pytest.mark.django_db
+def test_get_recipes_list(client, create_recipe):
+    """
+    Проверка получения списка рецептов.
+    API-эндпоинт: /api/recipes/
+    HTTP-метод: GET
+    """
+    response = client.get('/api/recipes/')
+    assert response.status_code == 200
+    assert len(response.data['results']) == 1
+    assert response.data['results'][0]['name'] == create_recipe.name
+
+
+@pytest.mark.django_db
+def test_get_recipes_list_filter_favorited(
+    auth_client, create_user, create_recipe, create_recipe_2
+):
+    """
+    Проверка фильтрации рецептов по избранному.
+    API-эндпоинт: /api/recipes/
+    HTTP-метод: GET
+    """
+    Favorite.objects.create(user=create_user, recipe=create_recipe)
+    response = auth_client.get('/api/recipes/?is_favorited=1')
+    assert response.status_code == 200
+    assert len(response.data['results']) == 1
+    assert response.data['results'][0]['id'] == create_recipe.id
+
+    response = auth_client.get('/api/recipes/?is_favorited=0')
+    assert response.status_code == 200
+    assert len(response.data['results']) == 1
+    assert response.data['results'][0]['id'] == create_recipe_2.id
+
+
+@pytest.mark.django_db
+def test_get_recipes_list_filter_shopping_cart(
+    auth_client, create_user, create_recipe, create_recipe_2
+):
+    """
+    Проверка фильтрации рецептов по списку покупок.
+    API-эндпоинт: /api/recipes/
+    HTTP-метод: GET
+    """
+    ShoppingCart.objects.create(user=create_user, recipe=create_recipe)
+    response = auth_client.get('/api/recipes/?is_in_shopping_cart=1')
+    assert response.status_code == 200
+    assert len(response.data['results']) == 1
+    assert response.data['results'][0]['id'] == create_recipe.id
+
+    response = auth_client.get('/api/recipes/?is_in_shopping_cart=0')
+    assert response.status_code == 200
+    assert len(response.data['results']) == 1
+    assert response.data['results'][0]['id'] == create_recipe_2.id
+
+
+@pytest.mark.django_db
+def test_get_recipes_list_filter_author(
+    client, create_user, create_user_2, create_recipe
+):
+    """
+    Проверка фильтрации рецептов по автору.
+    API-эндпоинт: /api/recipes/
+    HTTP-метод: GET
+    """
+    response = client.get(f'/api/recipes/?author={create_user.id}')
+    assert response.status_code == 200
+    assert len(response.data['results']) == 1
+    assert response.data['results'][0]['author']['id'] == create_user.id
+
+    response = client.get(f'/api/recipes/?author={create_user_2.id}')
+    assert response.status_code == 200
+    assert len(response.data['results']) == 0
+
+
+@pytest.mark.django_db
+def test_get_recipes_list_filter_tags(client, create_recipe, create_tag):
+    """
+    Проверка фильтрации рецептов по тегам.
+    API-эндпоинт: /api/recipes/
+    HTTP-метод: GET
+    """
+    response = client.get(f'/api/recipes/?tags={create_tag.slug}')
+    assert response.status_code == 200
+    assert len(response.data['results']) == 1
+    assert create_tag.slug in [
+        tag['slug'] for tag in response.data['results'][0]['tags']
+    ]
+
+    response = client.get('/api/recipes/?tags=nonexistent_tag')
+    assert response.status_code == 400
+    assert 'tags' in response.data
+
+
+@pytest.mark.django_db
+def test_update_recipe(
+    auth_client, create_recipe, create_user, create_tag, create_ingredient
+):
+    """
+    Проверка успешного обновления существующего рецепта его автором.
+    API-эндпоинт: /api/recipes/{id}/
+    HTTP-метод: PATCH
+    """
+    updated_data = {
+        'name': 'Новый омлет',
+        'text': 'Обновленный простой омлет',
+        'cooking_time': 15,
+        'tags': [create_tag.id],
+        'ingredients': [{'id': create_ingredient.id, 'amount': 250}],
+        'image': (
+            'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNkYAAAAAYAAjCB0C8AAAAASUVORK5CYII='  # noqa
         )
-        self.client.force_authenticate(user=self.user)
+    }
+    response = auth_client.patch(
+        f'/api/recipes/{create_recipe.id}/', updated_data, format='json'
+    )
+    assert response.status_code == 200
+    create_recipe.refresh_from_db()
+    assert create_recipe.name == updated_data['name']
+    assert create_recipe.cooking_time == updated_data['cooking_time']
 
-        # Создаем тестовые данные
-        self.tag = Tag.objects.create(
-            name='Завтрак',
-            color='#E26C2D',
-            slug='breakfast'
-        )
-        self.ingredient = Ingredient.objects.create(
-            name='Яйцо',
-            measurement_unit='шт.'
-        )
-        self.recipe_data = {
-            'name': 'Тестовый рецепт',
-            'text': 'Описание тестового рецепта',
-            'cooking_time': 30,
-            'tags': [self.tag.id],
-            'ingredients': [{'id': self.ingredient.id, 'amount': 2}],
-            'image': 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+P+/HgAFhAJ/wlseKgAAAABJRU5ErkJggg=='
-        }
 
-    def test_create_recipe(self):
-        """Тест создания рецепта."""
-        url = reverse('api:v1:recipes-list')
-        response = self.client.post(url, self.recipe_data, format='json')
-        # Добавляем вывод ответа для отладки
-        print("Response data:", response.data)
-        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
-        self.assertEqual(Recipe.objects.count(), 1)
-        recipe = Recipe.objects.first()
-        self.assertEqual(recipe.name, self.recipe_data['name'])
-        self.assertEqual(recipe.author, self.user)
-        self.assertEqual(recipe.ingredients.count(), 1)
+@pytest.mark.django_db
+def test_delete_recipe(auth_client, create_recipe):
+    """
+    Проверка успешного удаления рецепта его автором.
+    API-эндпоинт: /api/recipes/{id}/
+    HTTP-метод: DELETE
+    """
+    response = auth_client.delete(f'/api/recipes/{create_recipe.id}/')
+    assert response.status_code == 204
+    assert not Recipe.objects.filter(id=create_recipe.id).exists()
 
-    def test_get_recipe_list(self):
-        """Тест получения списка рецептов."""
-        recipe = Recipe.objects.create(
-            author=self.user,
-            name='Тестовый рецепт',
-            text='Описание',
-            cooking_time=30
-        )
-        url = reverse('api:v1:recipes-list')
-        response = self.client.get(url)
-        self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertEqual(len(response.data['results']), 1)
 
-    def test_filter_recipes_by_tag(self):
-        """Тест фильтрации рецептов по тегу."""
-        recipe = Recipe.objects.create(
-            author=self.user,
-            name='Тестовый рецепт',
-            text='Описание',
-            cooking_time=30
-        )
-        recipe.tags.add(self.tag)
+@pytest.mark.django_db
+def test_add_recipe_to_favorite(auth_client, create_recipe):
+    """
+    Проверка успешного добавления рецепта в избранное.
+    API-эндпоинт: /api/recipes/{id}/favorite/
+    HTTP-метод: POST
+    """
+    response = auth_client.post(f'/api/recipes/{create_recipe.id}/favorite/')
+    assert response.status_code == 201
+    assert Favorite.objects.filter(recipe=create_recipe).exists()
 
-        url = reverse('api:v1:recipes-list')
-        response = self.client.get(url, {'tags': self.tag.slug})
-        self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertEqual(len(response.data['results']), 1)
 
-    def test_favorite_recipe(self):
-        """Тест добавления рецепта в избранное."""
-        recipe = Recipe.objects.create(
-            author=self.user,
-            name='Тестовый рецепт',
-            text='Описание',
-            cooking_time=30
-        )
-        url = reverse('api:v1:recipes-favorite', args=[recipe.id])
-        response = self.client.post(url)
-        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
-        self.assertTrue(
-            recipe.favorites.filter(user=self.user).exists()
-        )
+@pytest.mark.django_db
+def test_remove_recipe_from_favorite(auth_client, create_user, create_recipe):
+    """
+    Проверка успешного удаления рецепта из избранного.
+    API-эндпоинт: /api/recipes/{id}/favorite/
+    HTTP-метод: DELETE
+    """
+    Favorite.objects.create(user=create_user, recipe=create_recipe)
+    response = auth_client.delete(f'/api/recipes/{create_recipe.id}/favorite/')
+    assert response.status_code == 204
+    assert not Favorite.objects.filter(recipe=create_recipe).exists()
 
-    def test_shopping_cart(self):
-        """Тест добавления рецепта в список покупок."""
-        recipe = Recipe.objects.create(
-            author=self.user,
-            name='Тестовый рецепт',
-            text='Описание',
-            cooking_time=30
-        )
-        url = reverse('api:v1:recipes-shopping-cart', args=[recipe.id])
-        response = self.client.post(url)
-        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
-        self.assertTrue(
-            recipe.shopping_cart.filter(user=self.user).exists()
-        )
 
-    def test_download_shopping_cart(self):
-        """Тест скачивания списка покупок."""
-        recipe = Recipe.objects.create(
-            author=self.user,
-            name='Тестовый рецепт',
-            text='Описание',
-            cooking_time=30
-        )
-        RecipeIngredient.objects.create(
-            recipe=recipe,
-            ingredient=self.ingredient,
-            amount=2
-        )
+@pytest.mark.django_db
+def test_add_recipe_to_shopping_cart(auth_client, create_recipe):
+    """
+    Проверка успешного добавления рецепта в список покупок.
+    API-эндпоинт: /api/recipes/{id}/shopping_cart/
+    HTTP-метод: POST
+    """
+    response = auth_client.post(
+        f'/api/recipes/{create_recipe.id}/shopping_cart/'
+    )
+    assert response.status_code == 201
+    assert ShoppingCart.objects.filter(recipe=create_recipe).exists()
 
-        # Добавляем рецепт в список покупок
-        url = reverse('api:v1:recipes-shopping-cart', args=[recipe.id])
-        self.client.post(url)
 
-        # Скачиваем список покупок
-        url = reverse('api:v1:recipes-download-shopping-cart')
-        response = self.client.get(url)
-        self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertEqual(response['Content-Type'], 'text/plain; charset=utf-8')
+@pytest.mark.django_db
+def test_remove_recipe_from_shopping_cart(  # noqa
+    auth_client, create_user, create_recipe
+):
+    """
+    Проверка успешного удаления рецепта из списка покупок.
+    API-эндпоинт: /api/recipes/{id}/shopping_cart/
+    HTTP-метод: DELETE
+    """
+    ShoppingCart.objects.create(user=create_user, recipe=create_recipe)
+    response = auth_client.delete(
+        f'/api/recipes/{create_recipe.id}/shopping_cart/'
+    )
+    assert response.status_code == 204
+    assert not ShoppingCart.objects.filter(recipe=create_recipe).exists()
+
+
+@pytest.mark.django_db
+def test_download_shopping_cart(
+    auth_client, create_user, create_recipe, create_ingredient
+):
+    """
+    Проверка успешного скачивания списка покупок авторизованным пользователем.
+    API-эндпоинт: /api/recipes/download_shopping_cart/
+    HTTP-метод: GET
+    """
+    ShoppingCart.objects.create(user=create_user, recipe=create_recipe)
+    response = auth_client.get('/api/recipes/download_shopping_cart/')
+    assert response.status_code == 200
+    assert response['Content-Type'].startswith('text/plain')
+    assert (
+        f'{create_ingredient.name} ({create_ingredient.measurement_unit}) - 200'  # noqa
+        in response.content.decode('utf-8')
+    )
