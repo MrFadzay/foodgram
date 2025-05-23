@@ -217,6 +217,8 @@ class RecipeShortSerializer(serializers.ModelSerializer):
 class FollowSerializer(UserSerializer):
     recipes = serializers.SerializerMethodField()
 
+    recipes_count = serializers.SerializerMethodField()
+
     class Meta:
         model = User
         fields = (
@@ -227,7 +229,12 @@ class FollowSerializer(UserSerializer):
             'last_name',
             'is_subscribed',
             'recipes',
+            'recipes_count',
+            'avatar',
         )
+
+    def get_recipes_count(self, obj):
+        return obj.recipes.count()
 
     def get_recipes(self, obj):
         request = self.context.get('request')
@@ -240,7 +247,7 @@ class FollowSerializer(UserSerializer):
                 recipes = recipes[:int(limit)]
             except ValueError:
                 pass
-        serializer = RecipeSerializer(
+        serializer = RecipeShortSerializer(
             recipes, many=True, context={'request': request}
         )
         return serializer.data
