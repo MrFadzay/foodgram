@@ -4,7 +4,7 @@ from django.shortcuts import get_object_or_404
 from django_filters.rest_framework import DjangoFilterBackend
 from rest_framework import mixins, status, viewsets
 from rest_framework.decorators import action
-from rest_framework.pagination import LimitOffsetPagination
+from rest_framework.pagination import PageNumberPagination
 from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.response import Response
 
@@ -87,7 +87,7 @@ class UserViewSet(mixins.ListModelMixin,
             return (AllowAny(),)
         return (IsAuthenticated(),)
 
-    pagination_class = LimitOffsetPagination
+    pagination_class = PageNumberPagination
 
     @action(
         detail=False,
@@ -192,7 +192,7 @@ class RecipeViewSet(viewsets.ModelViewSet):
     permission_classes = (IsAuthorOrReadOnly,)
     filter_backends = (DjangoFilterBackend,)
     filterset_class = RecipeFilter
-    pagination_class = LimitOffsetPagination
+    pagination_class = PageNumberPagination
 
     def get_serializer_class(self):
         if self.action in ('create', 'partial_update'):
