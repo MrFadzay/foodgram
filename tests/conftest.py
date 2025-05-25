@@ -1,15 +1,22 @@
+import os
 import pytest
 from rest_framework.test import APIClient  # type: ignore
 from django.contrib.auth import get_user_model  # type: ignore
 from django.core.files.base import ContentFile
 from django.core.files.uploadedfile import SimpleUploadedFile
 
+MEDIA_PATH = os.path.join(os.getcwd(), "media")
+
+if not os.path.exists(MEDIA_PATH):
+    os.makedirs(MEDIA_PATH, exist_ok=True)
+
+
 User = get_user_model()
 
 # Фиктивное изображение 1x1 прозрачный PNG в base64
 # Это очень маленькое изображение, которое подходит для тестов.
 TEST_IMAGE_BASE64 = (
-    'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNkYAAAAAYAAjCB0C8AAAAASUVORK5CYII=' # noqa
+    'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNkYAAAAAYAAjCB0C8AAAAASUVORK5CYII='  # noqa
 )
 # Используем очень маленькое изображение (1x1 прозрачный PNG)
 # для имитации загрузки файла.
