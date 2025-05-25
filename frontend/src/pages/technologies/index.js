@@ -18,18 +18,15 @@ const Technologies = () => {
           <h2 className={styles.subtitle}>Технологии, которые применены в этом проекте:</h2>
           <div className={styles.text}>
             <ul className={styles.textItem}>
-              <li className={styles.textItem}>
-                Python
-              </li>
-              <li className={styles.textItem}>
-                Django
-              </li>
-              <li className={styles.textItem}>
-                Django REST Framework
-              </li>
-              <li className={styles.textItem}>
-                Djoser
-              </li>
+              <li className={styles.textItem}>Python</li>
+              <li className={styles.textItem}>Django</li>
+              <li className={styles.textItem}>Django REST Framework</li>
+              <li className={styles.textItem}>Djoser</li>
+              <li className={styles.textItem}>React</li>
+              <li className={styles.textItem}>Docker</li>
+              <li className={styles.textItem}>nginx</li>
+              <li className={styles.textItem}>PostgreSQL</li>
+              <li className={styles.textItem}>GitHub Actions (CI/CD)</li>
             </ul>
           </div>
         </div>
@@ -76,4 +73,3 @@ const Technologies = () => {
 }
 
 export default Technologies
-

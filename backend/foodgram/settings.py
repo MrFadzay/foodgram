@@ -17,7 +17,6 @@ ALLOWED_HOSTS = os.getenv('ALLOWED_HOSTS', '127.0.0.1,localhost').split(',')
 SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
 USE_X_FORWARDED_HOST = True
 
-# Настройки кэширования
 CACHES = {
     'default': {
         'BACKEND': 'django.core.cache.backends.locmem.LocMemCache',
@@ -25,7 +24,6 @@ CACHES = {
     }
 }
 
-# Время жизни кэша (в секундах)
 CACHE_TTL = 60 * 5
 
 INSTALLED_APPS = [
