@@ -1,14 +1,8 @@
-import os
 import pytest
 from rest_framework.test import APIClient  # type: ignore
 from django.contrib.auth import get_user_model  # type: ignore
 from django.core.files.base import ContentFile
 from django.core.files.uploadedfile import SimpleUploadedFile
-
-MEDIA_PATH = os.path.join(os.getcwd(), "media")
-
-if not os.path.exists(MEDIA_PATH):
-    os.makedirs(MEDIA_PATH, exist_ok=True)
 
 
 User = get_user_model()
