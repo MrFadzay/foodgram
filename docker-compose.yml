@@ -27,5 +27,6 @@ services:
     env_file: .env
     volumes:
       - static:/staticfiles/
+      - media:/media
     ports:
       - 8000:80
