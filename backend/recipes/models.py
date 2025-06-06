@@ -3,6 +3,12 @@ from django.db import models
 
 from users.models import User
 
+from .constants import (
+    MAX_LENGTH_INGREDIENT_MEASUREMENT_UNIT, MAX_LENGTH_INGREDIENT_NAME,
+    MAX_LENGTH_RECIPE_NAME, MAX_LENGTH_TAG_COLOR, MAX_LENGTH_TAG_NAME,
+    MAX_LENGTH_TAG_SLUG, MESSAGE_MIN_AMOUNT, MESSAGE_MIN_COOKING_TIME,
+    MIN_AMOUNT, MIN_COOKING_TIME,
+)
 from .validators import (
     validate_hex_color, validate_image_extension, validate_image_size,
 )
@@ -12,18 +18,18 @@ class Tag(models.Model):
     """Модель тегов."""
     name = models.CharField(
         'Название',
-        max_length=32,
+        max_length=MAX_LENGTH_TAG_NAME,
         unique=True,
     )
     color = models.CharField(
         'Цвет в HEX',
-        max_length=7,
+        max_length=MAX_LENGTH_TAG_COLOR,
         unique=True,
         validators=[validate_hex_color],
     )
     slug = models.SlugField(
         'Уникальный слаг',
-        max_length=32,
+        max_length=MAX_LENGTH_TAG_SLUG,
         unique=True,
     )
 
@@ -40,11 +46,11 @@ class Ingredient(models.Model):
     """Модель ингредиентов."""
     name = models.CharField(
         'Название',
-        max_length=128,
+        max_length=MAX_LENGTH_INGREDIENT_NAME,
     )
     measurement_unit = models.CharField(
         'Единица измерения',
-        max_length=64,
+        max_length=MAX_LENGTH_INGREDIENT_MEASUREMENT_UNIT,
     )
 
     class Meta:
@@ -72,7 +78,7 @@ class Recipe(models.Model):
     )
     name = models.CharField(
         'Название',
-        max_length=256,
+        max_length=MAX_LENGTH_RECIPE_NAME,
     )
     image = models.ImageField(
         'Картинка',
@@ -97,8 +103,8 @@ class Recipe(models.Model):
         'Время приготовления (в минутах)',
         validators=[
             MinValueValidator(
-                1,
-                message='Минимальное время приготовления 1 минута'
+                MIN_COOKING_TIME,
+                message=MESSAGE_MIN_COOKING_TIME
             )
         ]
     )
@@ -134,7 +140,7 @@ class RecipeIngredient(models.Model):
     amount = models.PositiveSmallIntegerField(
         'Количество',
         validators=[
-            MinValueValidator(1, message='Минимальное количество 1')
+            MinValueValidator(MIN_AMOUNT, message=MESSAGE_MIN_AMOUNT)
         ]
     )
 

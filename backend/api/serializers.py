@@ -7,7 +7,7 @@ from drf_extra_fields.fields import Base64ImageField
 from rest_framework import serializers
 
 from recipes.models import (
-    Ingredient, Recipe, RecipeIngredient, Tag,
+    Favorite, Ingredient, Recipe, RecipeIngredient, ShoppingCart, Tag,
 )
 from users.models import Follow, User
 
@@ -260,7 +260,6 @@ class FollowCreateSerializer(serializers.ModelSerializer):
             raise serializers.ValidationError(
                 'Требуется аутентификация для подписки.'
             )
-
         user = request.user
         author = data['author']
 
@@ -271,6 +270,48 @@ class FollowCreateSerializer(serializers.ModelSerializer):
         if Follow.objects.filter(user=user, author=author).exists():
             raise serializers.ValidationError(
                 'Вы уже подписаны на этого пользователя.'
+            )
+        return data
+
+
+class FavoriteCreateSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Favorite
+        fields = ('user', 'recipe')
+
+    def validate(self, data):
+        request = self.context.get('request')
+        if not request or not request.user.is_authenticated:
+            raise serializers.ValidationError(
+                'Требуется аутентификация для добавления в избранное.'
+            )
+        user = request.user
+        recipe = data['recipe']
+
+        if Favorite.objects.filter(user=user, recipe=recipe).exists():
+            raise serializers.ValidationError(
+                'Рецепт уже добавлен в избранное.'
+            )
+        return data
+
+
+class ShoppingCartCreateSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = ShoppingCart
+        fields = ('user', 'recipe')
+
+    def validate(self, data):
+        request = self.context.get('request')
+        if not request or not request.user.is_authenticated:
+            raise serializers.ValidationError(
+                'Требуется аутентификация для добавления в список покупок.'
+            )
+        user = request.user
+        recipe = data['recipe']
+
+        if ShoppingCart.objects.filter(user=user, recipe=recipe).exists():
+            raise serializers.ValidationError(
+                'Рецепт уже добавлен в список покупок.'
             )
         return data
 
