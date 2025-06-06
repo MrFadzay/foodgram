@@ -1,7 +1,10 @@
 from django.contrib.auth.models import AbstractUser
 from django.db import models
 
-from recipes.validators import CustomEmailValidator
+from users.constants import (
+    MAX_LENGTH_EMAIL, MAX_LENGTH_FIRST_NAME, MAX_LENGTH_LAST_NAME,
+)
+from users.validators import CustomEmailValidator
 
 
 class User(AbstractUser):
@@ -10,23 +13,24 @@ class User(AbstractUser):
     """
     email = models.EmailField(
         'Email',
-        max_length=254,
+        max_length=MAX_LENGTH_EMAIL,
         unique=True,
         validators=[CustomEmailValidator()],
     )
     first_name = models.CharField(
         'Имя',
-        max_length=150,
+        max_length=MAX_LENGTH_FIRST_NAME,
     )
     last_name = models.CharField(
         'Фамилия',
-        max_length=150,
+        max_length=MAX_LENGTH_LAST_NAME,
     )
     avatar = models.ImageField(
         'Аватар',
         upload_to='users/',
         blank=True,
-        null=True
+        null=True,
+        default=''
     )
 
     USERNAME_FIELD = 'email'
@@ -35,7 +39,7 @@ class User(AbstractUser):
     class Meta:
         verbose_name = 'Пользователь'
         verbose_name_plural = 'Пользователи'
-        ordering = ['id']
+        ordering = ['username']
 
     def __str__(self):
         return self.username
@@ -70,3 +74,8 @@ class Follow(models.Model):
 
     def __str__(self):
         return f'{self.user.username} -> {self.author.username}'
+
+    def clean(self):
+        from django.core.exceptions import ValidationError
+        if self.user == self.author:
+            raise ValidationError('Вы не можете подписаться на самого себя.')

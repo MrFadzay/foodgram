@@ -1,26 +1,4 @@
-import re
-
 from django.core.exceptions import ValidationError
-from django.core.validators import EmailValidator
-from django.utils.deconstruct import deconstructible
-
-
-def validate_hex_color(value):
-    """Валидатор для проверки HEX-цвета."""
-    if not re.match(r'^#([A-Fa-f0-9]{6}|[A-Fa-f0-9]{3})$', value):
-        raise ValidationError(
-            'Цвет должен быть в формате HEX (#FFFFFF или #FFF)'
-        )
-
-
-@deconstructible
-class CustomEmailValidator(EmailValidator):
-    """Расширенный валидатор email."""
-
-    def validate_domain_part(self, domain_part):
-        if len(domain_part) > 255:
-            raise ValidationError('Домен email слишком длинный')
-        return super().validate_domain_part(domain_part)
 
 
 def validate_image_size(image):

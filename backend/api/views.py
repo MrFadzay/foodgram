@@ -118,7 +118,7 @@ class UserViewSet(mixins.ListModelMixin,
 
     @avatar.mapping.delete
     def delete_avatar(self, request):
-        request.user.avatar = None
+        request.user.avatar = ''
         request.user.save()
         return Response(status=status.HTTP_204_NO_CONTENT)
 
