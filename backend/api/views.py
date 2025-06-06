@@ -1,27 +1,29 @@
-from django.db.models import Sum
+from django.db.models import Sum, Count, Exists, OuterRef, Value, BooleanField
 from django.http import HttpResponse
 from django.shortcuts import get_object_or_404
 from django_filters.rest_framework import DjangoFilterBackend
 from rest_framework import mixins, status, viewsets
 from rest_framework.decorators import action
-from rest_framework.pagination import PageNumberPagination
 from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.response import Response
 
+from .pagination import CustomPageNumberPagination
+
 from api.decorators import method_rate_limit
 from recipes.models import (
-    Favorite, Ingredient, Recipe, RecipeIngredient, ShoppingCart, Tag,
+    Favorite, Ingredient, RecipeIngredient, ShoppingCart, Tag,
 )
+from recipes.models import Recipe
 from users.models import Follow, User
 
-from .filters import RecipeFilter
+from .filters import IngredientFilter, RecipeFilter
 from .mixins import CachedViewSetMixin
 from .permissions import IsAuthorOrReadOnly
 from .serializers import (
-    CustomUserCreateSerializer, CustomUserResponseOnCreateSerializer,
-    FollowSerializer, IngredientSerializer, RecipeCreateUpdateSerializer,
-    RecipeSerializer, RecipeShortSerializer, SetAvatarSerializer,
-    TagSerializer, UserSerializer,
+    UserCreateSerializer, UserResponseOnCreateSerializer,
+    FollowSerializer, FollowCreateSerializer, IngredientSerializer,
+    RecipeCreateUpdateSerializer, RecipeSerializer, RecipeShortSerializer,
+    SetAvatarSerializer, TagSerializer, UserSerializer,
 )
 
 
@@ -42,13 +44,8 @@ class IngredientViewSet(CachedViewSetMixin, viewsets.ReadOnlyModelViewSet):
     serializer_class = IngredientSerializer
     permission_classes = (AllowAny,)
     pagination_class = None
-
-    def get_queryset(self):
-        queryset = super().get_queryset()
-        name = self.request.query_params.get('name')
-        if name:
-            return queryset.filter(name__istartswith=name)
-        return queryset
+    filter_backends = (DjangoFilterBackend,)
+    filterset_class = IngredientFilter
 
 
 @method_rate_limit()
@@ -63,7 +60,9 @@ class UserViewSet(mixins.ListModelMixin,
 
     def get_serializer_class(self):
         if self.action == 'create':
-            return CustomUserCreateSerializer
+            return UserCreateSerializer
+        elif self.action == 'subscribe' and self.request.method == 'POST':
+            return FollowCreateSerializer
         elif self.action == 'subscribe':
             return FollowSerializer
         return UserSerializer
@@ -73,7 +72,7 @@ class UserViewSet(mixins.ListModelMixin,
         serializer.is_valid(raise_exception=True)
         self.perform_create(serializer)
         headers = self.get_success_headers(serializer.data)
-        response_serializer = CustomUserResponseOnCreateSerializer(
+        response_serializer = UserResponseOnCreateSerializer(
             serializer.instance
         )
         return Response(
@@ -87,7 +86,7 @@ class UserViewSet(mixins.ListModelMixin,
             return (AllowAny(),)
         return (IsAuthenticated(),)
 
-    pagination_class = PageNumberPagination
+    pagination_class = CustomPageNumberPagination
 
     @action(
         detail=False,
@@ -95,8 +94,6 @@ class UserViewSet(mixins.ListModelMixin,
         permission_classes=[IsAuthenticated]
     )
     def me(self, request):
-        if not request.user.is_authenticated:
-            return Response(status=status.HTTP_401_UNAUTHORIZED)
         serializer = self.get_serializer(request.user)
         return Response(serializer.data)
 
@@ -133,31 +130,26 @@ class UserViewSet(mixins.ListModelMixin,
         author = get_object_or_404(User, pk=pk)
 
         if request.method == 'POST':
-            if user == author:
-                return Response(
-                    {'errors': 'Нельзя подписаться на самого себя'},
-                    status=status.HTTP_400_BAD_REQUEST
-                )
-            if Follow.objects.filter(user=user, author=author).exists():
-                return Response(
-                    {'errors': 'Вы уже подписаны на этого пользователя'},
-                    status=status.HTTP_400_BAD_REQUEST
-                )
-            follow = Follow.objects.create(user=user, author=author)
-            serializer = FollowSerializer(
+            serializer = self.get_serializer(
+                data={'user': user.id, 'author': author.id}
+            )
+            serializer.is_valid(raise_exception=True)
+            serializer.save()
+            response_serializer = FollowSerializer(
                 author, context={'request': request}
             )
-            return Response(serializer.data, status=status.HTTP_201_CREATED)
-
-        if request.method == 'DELETE':
-            follow = Follow.objects.filter(user=user, author=author)
-            if follow.exists():
-                follow.delete()
-                return Response(status=status.HTTP_204_NO_CONTENT)
             return Response(
-                {'detail': 'Вы не подписаны на этого пользователя'},
-                status=status.HTTP_400_BAD_REQUEST
-            )
+                response_serializer.data,
+                status=status.HTTP_201_CREATED)
+
+        follow = Follow.objects.filter(user=user, author=author)
+        if follow.exists():
+            follow.delete()
+            return Response(status=status.HTTP_204_NO_CONTENT)
+        return Response(
+            {'detail': 'Вы не подписаны на этого пользователя'},
+            status=status.HTTP_400_BAD_REQUEST
+        )
 
     @action(
         detail=False,
@@ -166,9 +158,11 @@ class UserViewSet(mixins.ListModelMixin,
     )
     def subscriptions(self, request):
         user = request.user
-        authors = User.objects.filter(following__user=user).prefetch_related(
-            'recipes'
-        )
+        authors = User.objects.filter(
+            following__user=user
+        ).annotate(
+            recipes_count=Count('recipes')
+        ).prefetch_related('recipes')
         pages = self.paginate_queryset(authors)
         serializer = FollowSerializer(
             pages,
@@ -180,19 +174,43 @@ class UserViewSet(mixins.ListModelMixin,
 
 @method_rate_limit()
 class RecipeViewSet(viewsets.ModelViewSet):
-    queryset = Recipe.objects.select_related(
-        'author'
-    ).prefetch_related(
-        'tags',
-        'ingredients',
-        'recipe_ingredients',
-        'favorites',
-        'shopping_cart'
-    )
     permission_classes = (IsAuthorOrReadOnly,)
     filter_backends = (DjangoFilterBackend,)
     filterset_class = RecipeFilter
-    pagination_class = PageNumberPagination
+    pagination_class = CustomPageNumberPagination
+
+    def get_queryset(self):
+        user = self.request.user
+        queryset = Recipe.objects.select_related(
+            'author'
+        ).prefetch_related(
+            'tags',
+            'ingredients',
+            'recipe_ingredients',
+            'favorites',
+            'shopping_cart'
+        )
+        if user.is_authenticated:
+            queryset = queryset.annotate(
+                is_favorited=Exists(
+                    Favorite.objects.filter(
+                        user=user,
+                        recipe=OuterRef('pk')
+                    )
+                ),
+                is_in_shopping_cart=Exists(
+                    ShoppingCart.objects.filter(
+                        user=user,
+                        recipe=OuterRef('pk')
+                    )
+                )
+            )
+        else:
+            queryset = queryset.annotate(
+                is_favorited=Value(False, output_field=BooleanField()),
+                is_in_shopping_cart=Value(False, output_field=BooleanField())
+            )
+        return queryset
 
     def get_serializer_class(self):
         if self.action in ('create', 'partial_update'):
