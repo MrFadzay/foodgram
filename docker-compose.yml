@@ -2,6 +2,8 @@ volumes:
   pg_data:
   static:
   media:
+  redis_data:
+
 services:
   db:
     image: postgres:13.10
@@ -14,6 +16,8 @@ services:
     volumes:
       - static:/backend_static
       - media:/media
+    environment:
+      - SENTRY_DSN=${SENTRY_DSN}
     depends_on:
       - db
   frontend:
@@ -23,10 +27,21 @@ services:
     volumes:
       - static:/frontend_static
   gateway:
-    build: ./gateway/
+    build: ./nginx/
     env_file: .env
     volumes:
       - static:/staticfiles/
       - media:/media
     ports:
       - 8000:80
+    depends_on:
+      - backend
+      - frontend
+      - redis
+
+  redis:
+    image: redis:7.0.12-alpine
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
