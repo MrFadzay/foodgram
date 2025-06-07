@@ -34,7 +34,7 @@ jobs:
   build_and_push_to_docker_hub:
     name: Push Docker image to DockerHub
     runs-on: ubuntu-latest
-    needs: []
+    needs: flake8_checks
     steps:
       - name: Check out the repo
         uses: actions/checkout@v3
@@ -51,6 +51,7 @@ jobs:
           context: ./backend/
           push: true
           tags: ${{ secrets.DOCKER_USERNAME }}/foodgram_backend:latest
+          no-cache: true
   
   frontend_tests:
     runs-on: ubuntu-latest
