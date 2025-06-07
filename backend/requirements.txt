@@ -10,6 +10,7 @@ python-dotenv==1.0.0
 gunicorn==20.1.0
 psycopg2-binary==2.9.3
 django-ratelimit==4.1.0
+django-redis==5.2.0
 
 # Dev dependencies
 flake8==4.0.1
