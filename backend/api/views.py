@@ -1,4 +1,6 @@
-from django.db.models import Sum, Count, Exists, OuterRef, Value, BooleanField, F
+from django.db.models import (
+    Sum, Count, Exists, OuterRef, Value, BooleanField, F
+)
 from django.http import HttpResponse
 from django.shortcuts import get_object_or_404
 from django_filters.rest_framework import DjangoFilterBackend
@@ -118,7 +120,9 @@ class UserViewSet(mixins.ListModelMixin,
 
     @avatar.mapping.delete
     def delete_avatar(self, request):
-        request.user.avatar = ''
+        if request.user.avatar:
+            request.user.avatar.delete(save=False)
+        request.user.avatar = None
         request.user.save()
         return Response(status=status.HTTP_204_NO_CONTENT)
 
@@ -148,7 +152,8 @@ class UserViewSet(mixins.ListModelMixin,
         user = request.user
         author = get_object_or_404(User, pk=pk)
 
-        deleted_count, _ = Follow.objects.filter(user=user, author=author).delete()
+        deleted_count, _ = Follow.objects.filter(
+            user=user, author=author).delete()
         if deleted_count > 0:
             return Response(status=status.HTTP_204_NO_CONTENT)
         return Response(
@@ -246,14 +251,17 @@ class RecipeViewSet(viewsets.ModelViewSet):
         serializer.is_valid(raise_exception=True)
         serializer.save()
         response_serializer = RecipeShortSerializer(recipe)
-        return Response(response_serializer.data, status=status.HTTP_201_CREATED)
+        return Response(
+            response_serializer.data, status=status.HTTP_201_CREATED
+        )
 
     @favorite.mapping.delete
     def delete_favorite(self, request, pk=None):
         user = request.user
         recipe = get_object_or_404(Recipe, pk=pk)
 
-        deleted_count, _ = Favorite.objects.filter(user=user, recipe=recipe).delete()
+        deleted_count, _ = Favorite.objects.filter(
+            user=user, recipe=recipe).delete()
         if deleted_count > 0:
             return Response(status=status.HTTP_204_NO_CONTENT)
         return Response(
@@ -275,14 +283,17 @@ class RecipeViewSet(viewsets.ModelViewSet):
         serializer.is_valid(raise_exception=True)
         serializer.save()
         response_serializer = RecipeShortSerializer(recipe)
-        return Response(response_serializer.data, status=status.HTTP_201_CREATED)
+        return Response(
+            response_serializer.data, status=status.HTTP_201_CREATED
+        )
 
     @shopping_cart.mapping.delete
     def delete_shopping_cart(self, request, pk=None):
         user = request.user
         recipe = get_object_or_404(Recipe, pk=pk)
 
-        deleted_count, _ = ShoppingCart.objects.filter(user=user, recipe=recipe).delete()
+        deleted_count, _ = ShoppingCart.objects.filter(
+            user=user, recipe=recipe).delete()
         if deleted_count > 0:
             return Response(status=status.HTTP_204_NO_CONTENT)
         return Response(

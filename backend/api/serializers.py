@@ -54,6 +54,7 @@ class RecipeIngredientWriteSerializer(serializers.ModelSerializer):
 
 class UserSerializer(serializers.ModelSerializer):
     is_subscribed = serializers.SerializerMethodField()
+    avatar = serializers.SerializerMethodField()
 
     class Meta:
         model = User
@@ -74,6 +75,11 @@ class UserSerializer(serializers.ModelSerializer):
             and request.user.is_authenticated
             and obj.following.filter(user=request.user).exists()
         )
+
+    def get_avatar(self, obj):
+        if obj.avatar and obj.avatar.name:
+            return obj.avatar.url
+        return None
 
 
 class RecipeSerializer(serializers.ModelSerializer):
