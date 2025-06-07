@@ -262,7 +262,11 @@ class FollowCreateSerializer(serializers.ModelSerializer):
 
     def validate(self, data):
         request = self.context.get('request')
-        if not request or not request.user or not request.user.is_authenticated:
+        if (
+            not request
+            or not request.user
+            or not request.user.is_authenticated
+        ):
             raise serializers.ValidationError(
                 'Требуется аутентификация для подписки.'
             )
@@ -287,7 +291,11 @@ class FavoriteCreateSerializer(serializers.ModelSerializer):
 
     def validate(self, data):
         request = self.context.get('request')
-        if not request or not request.user or not request.user.is_authenticated:
+        if (
+            not request
+            or not request.user
+            or not request.user.is_authenticated
+        ):
             raise serializers.ValidationError(
                 'Требуется аутентификация для добавления в избранное.'
             )
@@ -308,7 +316,11 @@ class ShoppingCartCreateSerializer(serializers.ModelSerializer):
 
     def validate(self, data):
         request = self.context.get('request')
-        if not request or not request.user or not request.user.is_authenticated:
+        if (
+            not request
+            or not request.user
+            or not request.user.is_authenticated
+        ):
             raise serializers.ValidationError(
                 'Требуется аутентификация для добавления в список покупок.'
             )

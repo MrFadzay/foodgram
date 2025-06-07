@@ -1,5 +1,6 @@
 from django.urls import include, path
 from djoser import views as djoser_views
+
 from api.views import RecipeViewSet
 
 app_name = 'v1'

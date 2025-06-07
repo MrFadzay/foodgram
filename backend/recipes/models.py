@@ -5,13 +5,10 @@ from users.models import User
 
 from .constants import (
     MAX_LENGTH_INGREDIENT_MEASUREMENT_UNIT, MAX_LENGTH_INGREDIENT_NAME,
-    MAX_LENGTH_RECIPE_NAME, MAX_LENGTH_TAG_NAME,
-    MAX_LENGTH_TAG_SLUG, MESSAGE_MIN_AMOUNT, MESSAGE_MIN_COOKING_TIME,
-    MIN_AMOUNT, MIN_COOKING_TIME,
+    MAX_LENGTH_RECIPE_NAME, MAX_LENGTH_TAG_NAME, MAX_LENGTH_TAG_SLUG,
+    MESSAGE_MIN_AMOUNT, MESSAGE_MIN_COOKING_TIME, MIN_AMOUNT, MIN_COOKING_TIME,
 )
-from .validators import (
-    validate_image_extension, validate_image_size,
-)
+from .validators import validate_image_extension, validate_image_size
 
 
 class Tag(models.Model):

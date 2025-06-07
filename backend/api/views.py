@@ -1,5 +1,5 @@
 from django.db.models import (
-    Sum, Count, Exists, OuterRef, Value, BooleanField, F
+    BooleanField, Count, Exists, F, OuterRef, Sum, Value,
 )
 from django.http import HttpResponse
 from django.shortcuts import get_object_or_404
@@ -9,24 +9,22 @@ from rest_framework.decorators import action
 from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.response import Response
 
-from .pagination import CustomPageNumberPagination
-
 from api.decorators import method_rate_limit
 from recipes.models import (
-    Favorite, Ingredient, RecipeIngredient, ShoppingCart, Tag,
+    Favorite, Ingredient, Recipe, RecipeIngredient, ShoppingCart, Tag,
 )
-from recipes.models import Recipe
 from users.models import Follow, User
 
 from .filters import IngredientFilter, RecipeFilter
 from .mixins import CachedViewSetMixin
+from .pagination import CustomPageNumberPagination
 from .permissions import IsAuthorOrReadOnly
 from .serializers import (
-    UserCreateSerializer, UserResponseOnCreateSerializer,
-    FollowSerializer, FollowCreateSerializer, FavoriteCreateSerializer,
-    ShoppingCartCreateSerializer, IngredientSerializer,
-    RecipeCreateUpdateSerializer, RecipeSerializer, RecipeShortSerializer,
-    SetAvatarSerializer, TagSerializer, UserSerializer,
+    FavoriteCreateSerializer, FollowCreateSerializer, FollowSerializer,
+    IngredientSerializer, RecipeCreateUpdateSerializer, RecipeSerializer,
+    RecipeShortSerializer, SetAvatarSerializer, ShoppingCartCreateSerializer,
+    TagSerializer, UserCreateSerializer, UserResponseOnCreateSerializer,
+    UserSerializer,
 )
 
 
