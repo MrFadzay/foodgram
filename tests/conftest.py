@@ -93,7 +93,6 @@ def tag_data():
     """Фикстура для данных тестового тега."""
     return {
         'name': 'Завтрак',
-        'color': '#E26C2D',
         'slug': 'breakfast'
     }
 
