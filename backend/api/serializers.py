@@ -17,13 +17,13 @@ from .constants import MIN_AMOUNT_AND_COOKING_TIME
 class TagSerializer(serializers.ModelSerializer):
     class Meta:
         model = Tag
-        fields = ('id', 'name', 'slug')
+        fields = '__all__'
 
 
 class IngredientSerializer(serializers.ModelSerializer):
     class Meta:
         model = Ingredient
-        fields = ('id', 'name', 'measurement_unit')
+        fields = '__all__'
 
 
 class RecipeIngredientReadSerializer(serializers.ModelSerializer):
@@ -262,7 +262,7 @@ class FollowCreateSerializer(serializers.ModelSerializer):
 
     def validate(self, data):
         request = self.context.get('request')
-        if not request or not request.user.is_authenticated:
+        if not request or not request.user or not request.user.is_authenticated:
             raise serializers.ValidationError(
                 'Требуется аутентификация для подписки.'
             )
@@ -287,7 +287,7 @@ class FavoriteCreateSerializer(serializers.ModelSerializer):
 
     def validate(self, data):
         request = self.context.get('request')
-        if not request or not request.user.is_authenticated:
+        if not request or not request.user or not request.user.is_authenticated:
             raise serializers.ValidationError(
                 'Требуется аутентификация для добавления в избранное.'
             )
@@ -308,7 +308,7 @@ class ShoppingCartCreateSerializer(serializers.ModelSerializer):
 
     def validate(self, data):
         request = self.context.get('request')
-        if not request or not request.user.is_authenticated:
+        if not request or not request.user or not request.user.is_authenticated:
             raise serializers.ValidationError(
                 'Требуется аутентификация для добавления в список покупок.'
             )
