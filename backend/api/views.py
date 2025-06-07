@@ -94,7 +94,8 @@ class UserViewSet(mixins.ListModelMixin,
     @action(
         detail=False,
         methods=['get'],
-        permission_classes=[IsAuthenticated]
+        permission_classes=[IsAuthenticated],
+        url_path='me'
     )
     def me(self, request):
         serializer = self.get_serializer(request.user)
@@ -103,7 +104,8 @@ class UserViewSet(mixins.ListModelMixin,
     @action(
         detail=False,
         methods=['put'],
-        permission_classes=[IsAuthenticated]
+        permission_classes=[IsAuthenticated],
+        url_path='me/avatar'
     )
     def avatar(self, request):
         if not request.data:
@@ -129,7 +131,8 @@ class UserViewSet(mixins.ListModelMixin,
     @action(
         detail=True,
         methods=['post'],
-        permission_classes=[IsAuthenticated]
+        permission_classes=[IsAuthenticated],
+        url_path='subscribe'
     )
     def subscribe(self, request, pk=None):
         author = get_object_or_404(User, pk=pk)
@@ -164,7 +167,8 @@ class UserViewSet(mixins.ListModelMixin,
     @action(
         detail=False,
         methods=['get'],
-        permission_classes=[IsAuthenticated]
+        permission_classes=[IsAuthenticated],
+        url_path='subscriptions'
     )
     def subscriptions(self, request):
         user = request.user
