@@ -299,13 +299,6 @@ class RecipeUpdateSerializer(serializers.ModelSerializer):
     def update(self, instance, validated_data):
         ingredients = validated_data.pop('ingredients')
         tags = validated_data.pop('tags')
-
-        # Удаляем этот блок, так как Base64ImageField(required=False) должен сам обрабатывать отсутствие поля
-        # if 'image' in validated_data and (
-        #     validated_data['image'] is None or validated_data['image'] == ''
-        # ):
-        #     validated_data.pop('image')
-
         instance.tags.clear()
         instance.tags.set(tags)
         instance.ingredients.clear()
