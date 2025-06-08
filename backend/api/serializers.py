@@ -132,7 +132,7 @@ class RecipeCreateUpdateSerializer(RecipeSerializer):
         many=True,
         queryset=Tag.objects.all(),
     )
-    image = Base64ImageField(required=False)
+    image = serializers.ImageField(required=False, allow_null=True)
     cooking_time = serializers.IntegerField(
         validators=[MinValueValidator(MIN_AMOUNT_AND_COOKING_TIME)]
     )
