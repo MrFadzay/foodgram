@@ -126,19 +126,13 @@ class RecipeSerializer(serializers.ModelSerializer):
         )
 
 
-class RecipeCreateUpdateSerializer(RecipeSerializer):
+class RecipeCreateSerializer(serializers.ModelSerializer):
     ingredients = RecipeIngredientWriteSerializer(many=True)
     tags = serializers.PrimaryKeyRelatedField(
         many=True,
         queryset=Tag.objects.all(),
     )
-    image = Base64ImageField(required=False)
-
-    def validate_image(self, value):
-        if value is None or value == '':
-            return None
-        return value
-
+    image = Base64ImageField(required=True)
     cooking_time = serializers.IntegerField(
         validators=[MinValueValidator(MIN_AMOUNT_AND_COOKING_TIME)]
     )
@@ -155,12 +149,21 @@ class RecipeCreateUpdateSerializer(RecipeSerializer):
         )
 
     def validate(self, data):
-
         ingredients = data.get('ingredients')
         if not ingredients:
             raise serializers.ValidationError(
                 'Добавьте хотя бы один ингредиент.'
             )
+
+        for ingredient_data in ingredients:
+            try:
+                ingredient_data['amount'] = int(ingredient_data['amount'])
+            except (ValueError, TypeError):
+                raise serializers.ValidationError(
+                    {'ingredients': [
+                        'Количество ингредиента должно быть числом.']}
+                )
+
         ingredient_ids = [
             ingredient['ingredient'].id for ingredient in ingredients
         ]
@@ -175,11 +178,16 @@ class RecipeCreateUpdateSerializer(RecipeSerializer):
         if len(tags) != len(set(tags)):
             raise serializers.ValidationError('Теги не должны повторяться.')
 
-        if self.context.get('request').method == 'POST':
-            if 'image' not in data:
+        cooking_time = data.get('cooking_time')
+        if cooking_time is not None:
+            try:
+                data['cooking_time'] = int(cooking_time)
+            except (ValueError, TypeError):
                 raise serializers.ValidationError(
-                    'Добавьте изображение.',
+                    {'cooking_time': [
+                        'Время приготовления должно быть числом.']}
                 )
+
         return data
 
     def to_representation(self, instance):
@@ -207,15 +215,96 @@ class RecipeCreateUpdateSerializer(RecipeSerializer):
         self._set_ingredients(recipe, ingredients)
         return recipe
 
+
+class RecipeUpdateSerializer(serializers.ModelSerializer):
+    ingredients = RecipeIngredientWriteSerializer(many=True)
+    tags = serializers.PrimaryKeyRelatedField(
+        many=True,
+        queryset=Tag.objects.all(),
+    )
+    image = Base64ImageField(required=False)
+    cooking_time = serializers.IntegerField(
+        validators=[MinValueValidator(MIN_AMOUNT_AND_COOKING_TIME)]
+    )
+
+    class Meta:
+        model = Recipe
+        fields = (
+            'ingredients',
+            'tags',
+            'image',
+            'name',
+            'text',
+            'cooking_time',
+        )
+
+    def validate(self, data):
+        ingredients = data.get('ingredients')
+        if not ingredients:
+            raise serializers.ValidationError(
+                'Добавьте хотя бы один ингредиент.'
+            )
+
+        for ingredient_data in ingredients:
+            try:
+                ingredient_data['amount'] = int(ingredient_data['amount'])
+            except (ValueError, TypeError):
+                raise serializers.ValidationError(
+                    {'ingredients': [
+                        'Количество ингредиента должно быть числом.']}
+                )
+
+        ingredient_ids = [
+            ingredient['ingredient'].id for ingredient in ingredients
+        ]
+        if len(ingredient_ids) != len(set(ingredient_ids)):
+            raise serializers.ValidationError(
+                'Ингредиенты не должны повторяться.'
+            )
+
+        tags = data.get('tags')
+        if not tags:
+            raise serializers.ValidationError('Выберите хотя бы один тег.')
+        if len(tags) != len(set(tags)):
+            raise serializers.ValidationError('Теги не должны повторяться.')
+
+        cooking_time = data.get('cooking_time')
+        if cooking_time is not None:
+            try:
+                data['cooking_time'] = int(cooking_time)
+            except (ValueError, TypeError):
+                raise serializers.ValidationError(
+                    {'cooking_time': [
+                        'Время приготовления должно быть числом.']}
+                )
+
+        return data
+
+    def to_representation(self, instance):
+        return RecipeSerializer(instance, context=self.context).data
+
+    def _set_ingredients(self, recipe, ingredients):
+        RecipeIngredient.objects.bulk_create(
+            [
+                RecipeIngredient(
+                    recipe=recipe,
+                    ingredient=ingredient_data['ingredient'],
+                    amount=ingredient_data['amount']
+                )
+                for ingredient_data in ingredients
+            ]
+        )
+
     @transaction.atomic
     def update(self, instance, validated_data):
         ingredients = validated_data.pop('ingredients')
         tags = validated_data.pop('tags')
 
-        if 'image' in validated_data and (
-            validated_data['image'] is None or validated_data['image'] == ''
-        ):
-            validated_data.pop('image')
+        # Удаляем этот блок, так как Base64ImageField(required=False) должен сам обрабатывать отсутствие поля
+        # if 'image' in validated_data and (
+        #     validated_data['image'] is None or validated_data['image'] == ''
+        # ):
+        #     validated_data.pop('image')
 
         instance.tags.clear()
         instance.tags.set(tags)

@@ -21,10 +21,10 @@ from .pagination import CustomPageNumberPagination
 from .permissions import IsAuthorOrReadOnly
 from .serializers import (
     FavoriteCreateSerializer, FollowCreateSerializer, FollowSerializer,
-    IngredientSerializer, RecipeCreateUpdateSerializer, RecipeSerializer,
-    RecipeShortSerializer, SetAvatarSerializer, ShoppingCartCreateSerializer,
-    TagSerializer, UserCreateSerializer, UserResponseOnCreateSerializer,
-    UserSerializer,
+    IngredientSerializer, RecipeCreateSerializer, RecipeSerializer,
+    RecipeShortSerializer, RecipeUpdateSerializer, SetAvatarSerializer,
+    ShoppingCartCreateSerializer, TagSerializer, UserCreateSerializer,
+    UserResponseOnCreateSerializer, UserSerializer,
 )
 
 
@@ -225,8 +225,10 @@ class RecipeViewSet(viewsets.ModelViewSet):
         return queryset
 
     def get_serializer_class(self):
-        if self.action in ('create', 'partial_update'):
-            return RecipeCreateUpdateSerializer
+        if self.action == 'create':
+            return RecipeCreateSerializer
+        if self.action == 'partial_update':
+            return RecipeUpdateSerializer
         if self.action == 'favorite':
             return FavoriteCreateSerializer
         if self.action == 'shopping_cart':
