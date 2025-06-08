@@ -169,7 +169,10 @@ class RecipeCreateUpdateSerializer(RecipeSerializer):
             raise serializers.ValidationError('Теги не должны повторяться.')
 
         image = data.get('image')
-        if not image and not self.instance:
+        if not image:
+            if self.instance and self.instance.image:
+                data['image'] = self.instance.image
+        else:
             raise serializers.ValidationError('Добавьте изображение.')
         return data
 
