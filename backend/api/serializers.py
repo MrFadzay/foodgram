@@ -4,6 +4,7 @@ from djoser.serializers import (
     UserCreateSerializer as DjoserUserCreateSerializer,
 )
 from drf_extra_fields.fields import Base64ImageField
+import logging
 from rest_framework import serializers
 
 from recipes.models import (
@@ -12,6 +13,8 @@ from recipes.models import (
 from users.models import Follow, User
 
 from .constants import MIN_AMOUNT_AND_COOKING_TIME
+
+logger = logging.getLogger(__name__)
 
 
 class TagSerializer(serializers.ModelSerializer):
@@ -149,6 +152,10 @@ class RecipeCreateUpdateSerializer(RecipeSerializer):
         )
 
     def validate(self, data):
+        logger.info(f"Request method: {self.context.get('request').method}")
+        logger.info(f"Image in data: {'image' in data}")
+        logger.info(f"Self instance is None: {self.instance is None}")
+
         ingredients = data.get('ingredients')
         if not ingredients:
             raise serializers.ValidationError(
