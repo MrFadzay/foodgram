@@ -1,10 +1,11 @@
+import logging
+
 from django.core.validators import MinValueValidator
 from django.db import transaction
 from djoser.serializers import (
     UserCreateSerializer as DjoserUserCreateSerializer,
 )
 from drf_extra_fields.fields import Base64ImageField
-import logging
 from rest_framework import serializers
 
 from recipes.models import (
