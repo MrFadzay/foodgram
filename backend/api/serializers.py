@@ -132,7 +132,7 @@ class RecipeCreateUpdateSerializer(RecipeSerializer):
         many=True,
         queryset=Tag.objects.all(),
     )
-    image = Base64ImageField()
+    image = Base64ImageField(required=False)
     cooking_time = serializers.IntegerField(
         validators=[MinValueValidator(MIN_AMOUNT_AND_COOKING_TIME)]
     )
@@ -168,9 +168,9 @@ class RecipeCreateUpdateSerializer(RecipeSerializer):
         if len(tags) != len(set(tags)):
             raise serializers.ValidationError('Теги не должны повторяться.')
 
-        image = data.get('image')
-        if not image and not (self.instance and self.instance.image):
-            raise serializers.ValidationError('Добавьте изображение.')
+        if self.instance is None:
+            if not data.get('image'):
+                raise serializers.ValidationError('Добавьте изображение.')
         return data
 
     def to_representation(self, instance):
@@ -262,7 +262,7 @@ class FollowCreateSerializer(serializers.ModelSerializer):
     def validate(self, data):
         request = self.context.get('request')
         if (
-            not request
+            request is None
             or not request.user
             or not request.user.is_authenticated
         ):
@@ -291,7 +291,7 @@ class FavoriteCreateSerializer(serializers.ModelSerializer):
     def validate(self, data):
         request = self.context.get('request')
         if (
-            not request
+            request is None
             or not request.user
             or not request.user.is_authenticated
         ):
@@ -316,7 +316,7 @@ class ShoppingCartCreateSerializer(serializers.ModelSerializer):
     def validate(self, data):
         request = self.context.get('request')
         if (
-            not request
+            request is None
             or not request.user
             or not request.user.is_authenticated
         ):
