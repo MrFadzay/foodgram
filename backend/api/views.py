@@ -155,7 +155,7 @@ class UserViewSet(mixins.ListModelMixin,
 
         deleted_count, _ = Follow.objects.filter(
             user=user, author=author).delete()
-        if deleted_count > 0:
+        if deleted_count:
             return Response(status=status.HTTP_204_NO_CONTENT)
         return Response(
             {'detail': 'Вы не подписаны на этого пользователя'},
