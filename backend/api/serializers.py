@@ -133,6 +133,12 @@ class RecipeCreateUpdateSerializer(RecipeSerializer):
         queryset=Tag.objects.all(),
     )
     image = Base64ImageField(required=False)
+
+    def validate_image(self, value):
+        if value is None or value == '':
+            return None
+        return value
+
     cooking_time = serializers.IntegerField(
         validators=[MinValueValidator(MIN_AMOUNT_AND_COOKING_TIME)]
     )
