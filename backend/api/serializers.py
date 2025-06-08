@@ -217,14 +217,16 @@ class RecipeCreateSerializer(serializers.ModelSerializer):
 
 
 class RecipeUpdateSerializer(serializers.ModelSerializer):
-    ingredients = RecipeIngredientWriteSerializer(many=True)
+    ingredients = RecipeIngredientWriteSerializer(many=True, required=False)
     tags = serializers.PrimaryKeyRelatedField(
         many=True,
         queryset=Tag.objects.all(),
+        required=False
     )
     image = Base64ImageField(required=False, allow_null=True)
     cooking_time = serializers.IntegerField(
-        validators=[MinValueValidator(MIN_AMOUNT_AND_COOKING_TIME)]
+        validators=[MinValueValidator(MIN_AMOUNT_AND_COOKING_TIME)],
+        required=False
     )
 
     class Meta:
@@ -239,39 +241,43 @@ class RecipeUpdateSerializer(serializers.ModelSerializer):
         )
 
     def validate(self, data):
-        ingredients = data.get('ingredients')
-        if not ingredients:
-            raise serializers.ValidationError(
-                'Добавьте хотя бы один ингредиент.'
-            )
-
-        for ingredient_data in ingredients:
-            try:
-                ingredient_data['amount'] = int(ingredient_data['amount'])
-            except (ValueError, TypeError):
+        if 'ingredients' in data:
+            ingredients = data.get('ingredients')
+            if not ingredients:
                 raise serializers.ValidationError(
                     {'ingredients': [
-                        'Количество ингредиента должно быть числом.']}
+                        'Список ингредиентов не может быть пустым.']}
                 )
 
-        ingredient_ids = [
-            ingredient['ingredient'].id for ingredient in ingredients
-        ]
-        if len(ingredient_ids) != len(set(ingredient_ids)):
-            raise serializers.ValidationError(
-                'Ингредиенты не должны повторяться.'
-            )
+            for ingredient_data in ingredients:
+                try:
+                    ingredient_data['amount'] = int(ingredient_data['amount'])
+                except (ValueError, TypeError):
+                    raise serializers.ValidationError(
+                        {'ingredients': [
+                            'Количество ингредиента должно быть числом.']}
+                    )
 
-        tags = data.get('tags')
-        if not tags:
-            raise serializers.ValidationError('Выберите хотя бы один тег.')
-        if len(tags) != len(set(tags)):
-            raise serializers.ValidationError('Теги не должны повторяться.')
+            ingredient_ids = [
+                ingredient['ingredient'].id for ingredient in ingredients
+            ]
+            if len(ingredient_ids) != len(set(ingredient_ids)):
+                raise serializers.ValidationError(
+                    {'ingredients': ['Ингредиенты не должны повторяться.']}
+                )
 
-        cooking_time = data.get('cooking_time')
-        if cooking_time is not None:
+        if 'tags' in data:
+            tags = data.get('tags')
+            if not tags:
+                raise serializers.ValidationError(
+                    {'tags': ['Выберите хотя бы один тег.']})
+            if len(tags) != len(set(tags)):
+                raise serializers.ValidationError(
+                    {'tags': ['Теги не должны повторяться.']})
+
+        if 'cooking_time' in data and data.get('cooking_time') is not None:
             try:
-                data['cooking_time'] = int(cooking_time)
+                data['cooking_time'] = int(data['cooking_time'])
             except (ValueError, TypeError):
                 raise serializers.ValidationError(
                     {'cooking_time': [
@@ -284,6 +290,7 @@ class RecipeUpdateSerializer(serializers.ModelSerializer):
         return RecipeSerializer(instance, context=self.context).data
 
     def _set_ingredients(self, recipe, ingredients):
+
         RecipeIngredient.objects.bulk_create(
             [
                 RecipeIngredient(
@@ -297,14 +304,11 @@ class RecipeUpdateSerializer(serializers.ModelSerializer):
 
     @transaction.atomic
     def update(self, instance, validated_data):
-        ingredients = validated_data.pop('ingredients', None)
-        tags = validated_data.pop('tags', None)
+        if 'tags' in validated_data:
+            instance.tags.set(validated_data.pop('tags'))
 
-        if tags is not None:
-            instance.tags.clear()
-            instance.tags.set(tags)
-
-        if ingredients is not None:
+        if 'ingredients' in validated_data:
+            ingredients = validated_data.pop('ingredients')
             instance.ingredients.clear()
             self._set_ingredients(instance, ingredients)
 
