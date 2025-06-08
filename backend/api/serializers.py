@@ -238,6 +238,11 @@ class RecipeUpdateSerializer(serializers.ModelSerializer):
             'cooking_time',
         )
 
+    def validate_image(self, value):
+        if value is None:
+            return value
+        return value
+
     def validate(self, data):
         ingredients = data.get('ingredients')
         if not ingredients:
