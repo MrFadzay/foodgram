@@ -170,8 +170,10 @@ class RecipeCreateUpdateSerializer(RecipeSerializer):
 
         image = data.get('image')
         if not image:
-            raise serializers.ValidationError('Добавьте изображение.')
-
+            if self.instance and self.partial:
+                pass
+            else:
+                raise serializers.ValidationError('Добавьте изображение.')
         return data
 
     def to_representation(self, instance):
