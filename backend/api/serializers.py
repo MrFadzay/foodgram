@@ -222,7 +222,7 @@ class RecipeUpdateSerializer(serializers.ModelSerializer):
         many=True,
         queryset=Tag.objects.all(),
     )
-    image = Base64ImageField(required=False)
+    image = Base64ImageField(required=False, allow_null=True)
     cooking_time = serializers.IntegerField(
         validators=[MinValueValidator(MIN_AMOUNT_AND_COOKING_TIME)]
     )
@@ -237,11 +237,6 @@ class RecipeUpdateSerializer(serializers.ModelSerializer):
             'text',
             'cooking_time',
         )
-
-    def validate_image(self, value):
-        if value is None:
-            return value
-        return value
 
     def validate(self, data):
         ingredients = data.get('ingredients')
@@ -302,22 +297,18 @@ class RecipeUpdateSerializer(serializers.ModelSerializer):
 
     @transaction.atomic
     def update(self, instance, validated_data):
-        ingredients = validated_data.pop('ingredients')
-        tags = validated_data.pop('tags')
+        ingredients = validated_data.pop('ingredients', None)
+        tags = validated_data.pop('tags', None)
 
-        if 'image' in validated_data and validated_data['image'] is None:
-            validated_data.pop('image')
+        if tags is not None:
+            instance.tags.clear()
+            instance.tags.set(tags)
 
-        instance.tags.clear()
-        instance.tags.set(tags)
-        instance.ingredients.clear()
-        self._set_ingredients(instance, ingredients)
+        if ingredients is not None:
+            instance.ingredients.clear()
+            self._set_ingredients(instance, ingredients)
 
-        for attr, value in validated_data.items():
-            setattr(instance, attr, value)
-
-        instance.save()
-        return instance
+        return super().update(instance, validated_data)
 
 
 class RecipeShortSerializer(serializers.ModelSerializer):
