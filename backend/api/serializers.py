@@ -132,7 +132,7 @@ class RecipeCreateUpdateSerializer(RecipeSerializer):
         many=True,
         queryset=Tag.objects.all(),
     )
-    image = serializers.ImageField(required=False, allow_null=True)
+    image = Base64ImageField(required=False)
     cooking_time = serializers.IntegerField(
         validators=[MinValueValidator(MIN_AMOUNT_AND_COOKING_TIME)]
     )
@@ -206,6 +206,9 @@ class RecipeCreateUpdateSerializer(RecipeSerializer):
         instance.tags.set(tags)
         instance.ingredients.clear()
         self._set_ingredients(instance, ingredients)
+
+        if 'image' in validated_data and validated_data['image'] is None:
+            validated_data.pop('image')
 
         for attr, value in validated_data.items():
             setattr(instance, attr, value)
