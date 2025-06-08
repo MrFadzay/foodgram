@@ -22,9 +22,9 @@ from .permissions import IsAuthorOrReadOnly
 from .serializers import (
     FavoriteCreateSerializer, FollowCreateSerializer, FollowSerializer,
     IngredientSerializer, RecipeCreateUpdateSerializer, RecipeSerializer,
-    RecipeShortSerializer, SetAvatarSerializer,
-    ShoppingCartCreateSerializer, TagSerializer, UserCreateSerializer,
-    UserResponseOnCreateSerializer, UserSerializer,
+    RecipeShortSerializer, SetAvatarSerializer, ShoppingCartCreateSerializer,
+    TagSerializer, UserCreateSerializer, UserResponseOnCreateSerializer,
+    UserSerializer,
 )
 
 
