@@ -168,9 +168,11 @@ class RecipeCreateUpdateSerializer(RecipeSerializer):
         if len(tags) != len(set(tags)):
             raise serializers.ValidationError('Теги не должны повторяться.')
 
-        if not data.get('image') and self.instance is None:
-            raise serializers.ValidationError('Добавьте изображение.')
-
+        if self.context.get('request').method == 'POST':
+            if 'image' not in data:
+                raise serializers.ValidationError(
+                    'Добавьте изображение.',
+                )
         return data
 
     def to_representation(self, instance):
