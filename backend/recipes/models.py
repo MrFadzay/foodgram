@@ -74,6 +74,8 @@ class Recipe(models.Model):
         'Картинка',
         upload_to='recipes/',
         validators=[validate_image_size, validate_image_extension],
+        blank=True,
+        null=True,
     )
     text = models.TextField(
         'Описание',
