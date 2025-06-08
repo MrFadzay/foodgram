@@ -168,6 +168,13 @@ class RecipeCreateUpdateSerializer(RecipeSerializer):
         if len(tags) != len(set(tags)):
             raise serializers.ValidationError('Теги не должны повторяться.')
 
+        if self.instance is None:
+            if not data.get('image'):
+                raise serializers.ValidationError('Добавьте изображение.')
+        elif 'image' in data and not data.get('image'):
+            raise serializers.ValidationError(
+                'Изображение не может быть пустым.')
+
         return data
 
     def to_representation(self, instance):
@@ -204,7 +211,16 @@ class RecipeCreateUpdateSerializer(RecipeSerializer):
         instance.ingredients.clear()
         self._set_ingredients(instance, ingredients)
 
-        return super().update(instance, validated_data)
+        image_data = validated_data.pop('image', None)
+
+        for attr, value in validated_data.items():
+            setattr(instance, attr, value)
+
+        if image_data:
+            instance.image = image_data
+
+        instance.save()
+        return instance
 
 
 class RecipeShortSerializer(serializers.ModelSerializer):
