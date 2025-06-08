@@ -171,9 +171,6 @@ class RecipeCreateUpdateSerializer(RecipeSerializer):
         if self.instance is None:
             if not data.get('image'):
                 raise serializers.ValidationError('Добавьте изображение.')
-        elif 'image' in data and not data.get('image'):
-            raise serializers.ValidationError(
-                'Изображение не может быть пустым.')
 
         return data
 
