@@ -20,6 +20,7 @@ services:
       - SENTRY_DSN=${SENTRY_DSN}
     depends_on:
       - db
+      - redis
   frontend:
     image: fadzay/foodgram_frontend
     env_file: .env
