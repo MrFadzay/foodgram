@@ -208,13 +208,8 @@ class RecipeCreateUpdateSerializer(RecipeSerializer):
         instance.ingredients.clear()
         self._set_ingredients(instance, ingredients)
 
-        image_data = validated_data.pop('image', None)
-
         for attr, value in validated_data.items():
             setattr(instance, attr, value)
-
-        if image_data:
-            instance.image = image_data
 
         instance.save()
         return instance
