@@ -299,6 +299,10 @@ class RecipeUpdateSerializer(serializers.ModelSerializer):
     def update(self, instance, validated_data):
         ingredients = validated_data.pop('ingredients')
         tags = validated_data.pop('tags')
+
+        if 'image' in validated_data and validated_data['image'] is None:
+            validated_data.pop('image')
+
         instance.tags.clear()
         instance.tags.set(tags)
         instance.ingredients.clear()
