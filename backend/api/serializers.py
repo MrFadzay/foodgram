@@ -1,5 +1,3 @@
-import logging
-
 from django.core.validators import MinValueValidator
 from django.db import transaction
 from djoser.serializers import (
@@ -14,8 +12,6 @@ from recipes.models import (
 from users.models import Follow, User
 
 from .constants import MIN_AMOUNT_AND_COOKING_TIME
-
-logger = logging.getLogger(__name__)
 
 
 class TagSerializer(serializers.ModelSerializer):
@@ -153,9 +149,6 @@ class RecipeCreateUpdateSerializer(RecipeSerializer):
         )
 
     def validate(self, data):
-        logger.info(f"Request method: {self.context.get('request').method}")
-        logger.info(f"Image in data: {'image' in data}")
-        logger.info(f"Self instance is None: {self.instance is None}")
 
         ingredients = data.get('ingredients')
         if not ingredients:
@@ -216,9 +209,6 @@ class RecipeCreateUpdateSerializer(RecipeSerializer):
         instance.tags.set(tags)
         instance.ingredients.clear()
         self._set_ingredients(instance, ingredients)
-
-        if 'image' in validated_data and validated_data['image'] is None:
-            validated_data.pop('image')
 
         for attr, value in validated_data.items():
             setattr(instance, attr, value)
