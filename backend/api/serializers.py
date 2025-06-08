@@ -126,13 +126,13 @@ class RecipeSerializer(serializers.ModelSerializer):
         )
 
 
-class RecipeCreateSerializer(serializers.ModelSerializer):
+class RecipeCreateUpdateSerializer(serializers.ModelSerializer):
     ingredients = RecipeIngredientWriteSerializer(many=True)
     tags = serializers.PrimaryKeyRelatedField(
         many=True,
         queryset=Tag.objects.all(),
     )
-    image = Base64ImageField(required=True)
+    image = Base64ImageField(required=False, allow_null=True)
     cooking_time = serializers.IntegerField(
         validators=[MinValueValidator(MIN_AMOUNT_AND_COOKING_TIME)]
     )
@@ -149,98 +149,23 @@ class RecipeCreateSerializer(serializers.ModelSerializer):
         )
 
     def validate(self, data):
-        ingredients = data.get('ingredients')
-        if not ingredients:
-            raise serializers.ValidationError(
-                'Добавьте хотя бы один ингредиент.'
-            )
+        request = self.context.get('request')
+        is_creating = request and request.method == 'POST'
 
-        for ingredient_data in ingredients:
-            try:
-                ingredient_data['amount'] = int(ingredient_data['amount'])
-            except (ValueError, TypeError):
+        if is_creating:
+            if 'image' not in data or not data.get('image'):
                 raise serializers.ValidationError(
-                    {'ingredients': [
-                        'Количество ингредиента должно быть числом.']}
+                    {'image': ['Добавьте изображение.']}
                 )
-
-        ingredient_ids = [
-            ingredient['ingredient'].id for ingredient in ingredients
-        ]
-        if len(ingredient_ids) != len(set(ingredient_ids)):
-            raise serializers.ValidationError(
-                'Ингредиенты не должны повторяться.'
-            )
-
-        tags = data.get('tags')
-        if not tags:
-            raise serializers.ValidationError('Выберите хотя бы один тег.')
-        if len(tags) != len(set(tags)):
-            raise serializers.ValidationError('Теги не должны повторяться.')
-
-        cooking_time = data.get('cooking_time')
-        if cooking_time is not None:
-            try:
-                data['cooking_time'] = int(cooking_time)
-            except (ValueError, TypeError):
+            if 'ingredients' not in data or not data.get('ingredients'):
                 raise serializers.ValidationError(
-                    {'cooking_time': [
-                        'Время приготовления должно быть числом.']}
+                    {'ingredients': ['Добавьте хотя бы один ингредиент.']}
+                )
+            if 'tags' not in data or not data.get('tags'):
+                raise serializers.ValidationError(
+                    {'tags': ['Выберите хотя бы один тег.']}
                 )
 
-        return data
-
-    def to_representation(self, instance):
-        return RecipeSerializer(instance, context=self.context).data
-
-    def _set_ingredients(self, recipe, ingredients):
-        RecipeIngredient.objects.bulk_create(
-            [
-                RecipeIngredient(
-                    recipe=recipe,
-                    ingredient=ingredient_data['ingredient'],
-                    amount=ingredient_data['amount']
-                )
-                for ingredient_data in ingredients
-            ]
-        )
-
-    @transaction.atomic
-    def create(self, validated_data):
-        ingredients = validated_data.pop('ingredients')
-        tags = validated_data.pop('tags')
-        author = self.context.get('request').user
-        recipe = Recipe.objects.create(author=author, **validated_data)
-        recipe.tags.set(tags)
-        self._set_ingredients(recipe, ingredients)
-        return recipe
-
-
-class RecipeUpdateSerializer(serializers.ModelSerializer):
-    ingredients = RecipeIngredientWriteSerializer(many=True, required=False)
-    tags = serializers.PrimaryKeyRelatedField(
-        many=True,
-        queryset=Tag.objects.all(),
-        required=False
-    )
-    image = Base64ImageField(required=False, allow_null=True)
-    cooking_time = serializers.IntegerField(
-        validators=[MinValueValidator(MIN_AMOUNT_AND_COOKING_TIME)],
-        required=False
-    )
-
-    class Meta:
-        model = Recipe
-        fields = (
-            'ingredients',
-            'tags',
-            'image',
-            'name',
-            'text',
-            'cooking_time',
-        )
-
-    def validate(self, data):
         if 'ingredients' in data:
             ingredients = data.get('ingredients')
             if not ingredients:
@@ -248,7 +173,6 @@ class RecipeUpdateSerializer(serializers.ModelSerializer):
                     {'ingredients': [
                         'Список ингредиентов не может быть пустым.']}
                 )
-
             for ingredient_data in ingredients:
                 try:
                     ingredient_data['amount'] = int(ingredient_data['amount'])
@@ -257,10 +181,7 @@ class RecipeUpdateSerializer(serializers.ModelSerializer):
                         {'ingredients': [
                             'Количество ингредиента должно быть числом.']}
                     )
-
-            ingredient_ids = [
-                ingredient['ingredient'].id for ingredient in ingredients
-            ]
+            ingredient_ids = [ing['ingredient'].id for ing in ingredients]
             if len(ingredient_ids) != len(set(ingredient_ids)):
                 raise serializers.ValidationError(
                     {'ingredients': ['Ингредиенты не должны повторяться.']}
@@ -270,10 +191,12 @@ class RecipeUpdateSerializer(serializers.ModelSerializer):
             tags = data.get('tags')
             if not tags:
                 raise serializers.ValidationError(
-                    {'tags': ['Выберите хотя бы один тег.']})
+                    {'tags': ['Выберите хотя бы один тег.']}
+                )
             if len(tags) != len(set(tags)):
                 raise serializers.ValidationError(
-                    {'tags': ['Теги не должны повторяться.']})
+                    {'tags': ['Теги не должны повторяться.']}
+                )
 
         if 'cooking_time' in data and data.get('cooking_time') is not None:
             try:
@@ -290,17 +213,26 @@ class RecipeUpdateSerializer(serializers.ModelSerializer):
         return RecipeSerializer(instance, context=self.context).data
 
     def _set_ingredients(self, recipe, ingredients):
-
         RecipeIngredient.objects.bulk_create(
             [
                 RecipeIngredient(
                     recipe=recipe,
                     ingredient=ingredient_data['ingredient'],
                     amount=ingredient_data['amount']
-                )
-                for ingredient_data in ingredients
+                ) for ingredient_data in ingredients
             ]
         )
+
+    @transaction.atomic
+    def create(self, validated_data):
+        ingredients = validated_data.pop('ingredients')
+        tags = validated_data.pop('tags')
+        request = self.context.get('request')
+        author = request.user if request and request.user else None
+        recipe = Recipe.objects.create(author=author, **validated_data)
+        recipe.tags.set(tags)
+        self._set_ingredients(recipe, ingredients)
+        return recipe
 
     @transaction.atomic
     def update(self, instance, validated_data):
